@@ -1,0 +1,241 @@
+/* static/css/landingPage.css */
+
+:root {
+    --color-bg: #f7f5fb;
+    --color-primary: #6b2d8f;
+    --color-primary-soft: #8c4cb0;
+    --color-accent: #e65c9c;
+    --color-text: #2c2c2c;
+    --color-card-bg: #ffffff;
+}
+
+/* Reset muy suave */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: radial-gradient(circle at top left, #fbe9ff 0, #f7f5fb 45%, #fdfbff 100%);
+    color: var(--color-text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Barra superior pequeña */
+.top-bar {
+    padding: 0.75rem 2.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.top-bar__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.top-bar__brand img {
+    height: 34px;
+}
+
+.top-bar__tagline {
+    font-weight: 500;
+    color: var(--color-primary);
+}
+
+/* Sección hero */
+.hero {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1.5rem 4rem;
+}
+
+.hero__content {
+    max-width: 1050px;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr);
+    gap: 3rem;
+    align-items: center;
+}
+
+/* Columna de texto */
+.hero__text h1 {
+    font-size: 2.4rem;
+    line-height: 1.2;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary);
+}
+
+.hero__text h1 span {
+    color: var(--color-accent);
+}
+
+.hero__text p {
+    font-size: 1.02rem;
+    max-width: 32rem;
+    margin-bottom: 1.5rem;
+    color: #555;
+}
+
+.hero__badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.8rem;
+}
+
+.badge {
+    font-size: 0.78rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(107, 45, 143, 0.07);
+    color: var(--color-primary-soft);
+    border: 1px solid rgba(107, 45, 143, 0.12);
+}
+
+/* Botones principales */
+.hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1.4rem;
+    border-radius: 999px;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+    color: #fff;
+    box-shadow: 0 10px 25px rgba(107, 45, 143, 0.25);
+}
+
+.btn-secondary {
+    background: #fff;
+    color: var(--color-primary);
+    border: 1px solid rgba(107, 45, 143, 0.16);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+/* Tarjeta login a la derecha */
+.hero__card {
+    background: var(--color-card-bg);
+    border-radius: 18px;
+    padding: 2.1rem 2rem;
+    box-shadow: 0 18px 45px rgba(35, 8, 64, 0.09);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    max-width: 420px;
+    margin-left: auto;
+}
+
+.hero__card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    color: var(--color-primary);
+}
+
+.hero__card-subtitle {
+    font-size: 0.9rem;
+    color: #777;
+    margin-bottom: 1.4rem;
+}
+
+/* Formularios */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #555;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border-radius: 9px;
+    border: 1px solid #ddd;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus {
+    border-color: var(--color-primary-soft);
+    box-shadow: 0 0 0 2px rgba(107, 45, 143, 0.18);
+}
+
+/* Alertas (para mensajes flash de Flask) */
+.alert {
+    padding: 0.65rem 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 0.9rem;
+    font-size: 0.86rem;
+}
+
+.alert-success {
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.alert-danger {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+/* Footer */
+footer {
+    padding: 0.8rem 1.5rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #777;
+    border-top: 1px solid rgba(0,0,0,0.03);
+}
+
+/* Responsivo */
+@media (max-width: 880px) {
+    .hero__content {
+        grid-template-columns: 1fr;
+        gap: 2rem;
+    }
+
+    .hero__card {
+        margin-left: 0;
+    }
+
+    .hero__text h1 {
+        font-size: 2rem;
+    }
+}
