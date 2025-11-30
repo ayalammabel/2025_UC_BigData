@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 import os
 
 # Importar helpers (según tu estructura)
-from Helpers import MongoDB, ElasticSearch, funciones
+from Helpers.mongoDB import MongoDB
+from Helpers.elastic import ElasticSearch
+from Helpers.funciones import funciones
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
