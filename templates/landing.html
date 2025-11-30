@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio – Proyecto BigData Lenguaje Controlado{% endblock %}
+
+{% block content %}
+<header class="header shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">BigData · Lenguaje controlado</a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarMain" aria-controls="navbarMain"
+                    aria-expanded="false" aria-label="Menú de navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/buscador">Buscador</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/about">Acerca del proyecto</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Ingresar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/contacto">Contacto</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+</header>
+
+<main class="container py-5">
+    <section class="row align-items-center">
+        <div class="col-lg-7">
+            <h1 class="mb-4 hero-title">
+                Proyecto BigData · Lenguaje controlado de la Secretaría de la Mujer
+            </h1>
+            <p class="lead">
+                Esta aplicación explora y organiza el <b>lenguaje controlado</b> utilizado
+                en los sistemas de información de la Secretaría Distrital de la Mujer,
+                combinando técnicas de <b>Big Data</b>, <b>Procesamiento de Lenguaje Natural (PLN)</b>
+                y <b>búsqueda en documentos normativos</b>.
+            </p>
+            <p>
+                Podrás consultar términos, definiciones y documentos asociados (decretos,
+                resoluciones, lineamientos técnicos, etc.), todo centralizado en un solo lugar.
+            </p>
+
+            <div class="mt-4 d-flex flex-wrap gap-2">
+                <a href="/buscador" class="btn btn-primary">
+                    Ir al buscador de términos
+                </a>
+                <a href="/login" class="btn btn-outline-secondary">
+                    Iniciar sesión (admin)
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-5 mt-4 mt-lg-0">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title">¿Qué hace esta herramienta?</h5>
+                    <ul class="mb-0">
+                        <li>Integra términos padre e hijo del lenguaje controlado.</li>
+                        <li>Conecta cada término con sus definiciones y fuentes oficiales.</li>
+                        <li>Permite buscar dentro de los textos completos de los PDFs.</li>
+                        <li>Facilita la estandarización del lenguaje en la entidad.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-5 row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 feature-card">
+                <div class="card-body">
+                    <h5 class="card-title">Lenguaje controlado</h5>
+                    <p class="card-text">
+                        Catálogo estructurado de términos clave usados en los sistemas
+                        de información de la Secretaría de la Mujer, con relaciones
+                        entre términos padre e hijo.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 feature-card">
+                <div class="card-body">
+                    <h5 class="card-title">Documentos normativos</h5>
+                    <p class="card-text">
+                        Asociación de cada término con los documentos normativos
+                        en los que aparece (leyes, decretos, lineamientos, etc.),
+                        extraídos automáticamente desde PDFs.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 feature-card">
+                <div class="card-body">
+                    <h5 class="card-title">Búsqueda inteligente</h5>
+                    <p class="card-text">
+                        Motor de búsqueda preparado para consultar por término, definición
+                        o palabras clave dentro del texto de los documentos indexados
+                        en ElasticSearch.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
