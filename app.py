@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import os
 
 # Importar helpers (según tu estructura)
-from Helpers import MongoDB, ElasticSearch, Funciones
+from Helpers import MongoDB, ElasticSearch, funciones
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
@@ -31,7 +31,7 @@ CREATOR_APP = "MabelAyala"
 # ================== INICIALIZAR CONEXIONES ==================
 mongo = MongoDB(MONGO_URI, MONGO_DB, MONGO_COLECCION)
 elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
-
+utils = funciones() 
 
 # ================== DECORADOR PARA RUTAS PROTEGIDAS ==================
 from functools import wraps
