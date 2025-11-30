@@ -1,0 +1,6 @@
+Flask
+pymongo
+gunicorn
+python-dotenv
+requests
+elasticsearch
