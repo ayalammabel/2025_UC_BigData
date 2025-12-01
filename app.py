@@ -1,5 +1,5 @@
 # app.py
-from mongoDB import MongoDB
+# from mongoDB import MongoDB
 from elastic import ElasticSearch
 from functions import funciones
 
@@ -22,9 +22,9 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
 # ================== CONFIGURACIÓN MONGODB ==================
-MONGO_URI = os.getenv('MONGO_URI')
-MONGO_DB = os.getenv('MONGO_DB')
-MONGO_COLECCION = os.getenv('MONGO_COLECCION', 'usuario_roles')
+#MONGO_URI = os.getenv('MONGO_URI')
+#MONGO_DB = os.getenv('MONGO_DB')
+#MONGO_COLECCION = os.getenv('MONGO_COLECCION', 'usuario_roles')
 
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
 ELASTIC_CLOUD_URL = os.getenv('ELASTIC_CLOUD_URL')
@@ -35,7 +35,7 @@ VERSION_APP = "1.0.0"
 CREATOR_APP = "MabelAyala"
 
 # ================== INICIALIZAR CONEXIONES ==================
-mongo = MongoDB(MONGO_URI, MONGO_DB, MONGO_COLECCION)
+# mongo = MongoDB(MONGO_URI, MONGO_DB, MONGO_COLECCION)
 elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
 utils = funciones() 
 
