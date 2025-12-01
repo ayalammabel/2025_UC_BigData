@@ -43,7 +43,19 @@ def login_required(f):
 
 # ================== RUTAS ==================
 
-@app.route('/')
+# ================== RUTAS ==================
+
+# Landing en "/"
+@app.route('/', endpoint='landing')
+def landing():
+    """Landing page pública"""
+    return render_template(
+        'landing.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP
+    )
+
+# Buscador en "/buscador"
 @app.route('/buscador')
 def buscador():
     """
@@ -56,13 +68,6 @@ def buscador():
         creador=CREATOR_APP
     )
 
-def landing():
-    """Landing page pública"""
-    return render_template(
-        'landing.html',
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
 
 
 @app.route('/login', methods=['GET', 'POST'])
