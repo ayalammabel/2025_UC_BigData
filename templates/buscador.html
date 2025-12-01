@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador de términos · Lenguaje controlado</title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet">
+
+    <!-- Tu CSS -->
+    <link href="{{ url_for('static', filename='css/landingPage.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('landing') }}">
+                BigData · Lenguaje controlado
+            </a>
+
+            <div>
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('landing') }}">Inicio</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('buscador') }}">Buscador</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('about') }}">Acerca del proyecto</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('contacto') }}">Contacto</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <main class="container py-5">
+        <h1 class="mb-4">Buscador de términos</h1>
+        <p class="text-muted">
+            Aquí podrás buscar términos del lenguaje controlado de la Secretaría de la Mujer,
+            ver si son término padre o hijo, sus definiciones y los documentos asociados.
+        </p>
+
+        <form class="row gy-2 gx-2 align-items-center mt-4">
+            <div class="col-sm-8">
+                <input type="text" class="form-control form-control-lg"
+                       placeholder="Escribe un término (ej. violencia económica, trabajo de cuidado)…">
+            </div>
+            <div class="col-sm-4 d-grid">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Buscar término
+                </button>
+            </div>
+        </form>
+
+        <!-- Aquí luego pondremos los resultados del buscador -->
+        <section class="mt-5">
+            <h2 class="h5">Resultados</h2>
+            <p class="text-muted">Cuando el buscador esté conectado a Elastic, verás aquí los resultados.</p>
+        </section>
+    </main>
+
+    <footer class="text-center py-4 text-muted">
+        Creado por {{ creador }} · Versión {{ version }}
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js">
+    </script>
+</body>
+</html>
