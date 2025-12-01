@@ -1,12 +1,7 @@
-"""
-Author: Luis Fernando Castellanos
-Date: 2025-09-11
-Description: este modulo son las funciones sobre mongoDB
-"""
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from datetime import datetime
-class mongoDB_operaciones:
+class MongoDB:
     def __init__(self, uri, db_name):
         self.uri = uri
         self.db_name = db_name
