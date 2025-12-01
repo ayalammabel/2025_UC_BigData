@@ -44,6 +44,18 @@ def login_required(f):
 # ================== RUTAS ==================
 
 @app.route('/')
+@app.route('/buscador')
+def buscador():
+    """
+    Página pública del buscador de términos.
+    Más adelante aquí conectamos con ElasticSearch.
+    """
+    return render_template(
+        'buscador.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP
+    )
+
 def landing():
     """Landing page pública"""
     return render_template(
