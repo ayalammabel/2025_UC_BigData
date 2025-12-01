@@ -1,4 +1,8 @@
 # app.py
+from mongoDB import MongoDB
+from elastic import ElasticSearch
+from functions import funciones
+
 from flask import (
     Flask, render_template, request,
     redirect, url_for, session, flash
