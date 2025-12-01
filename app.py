@@ -1,19 +1,15 @@
 # app.py
-# from mongoDB import MongoDB
-from elastic import ElasticSearch
-from functions import funciones
-
 from flask import (
     Flask, render_template, request,
     redirect, url_for, session, flash
 )
 from dotenv import load_dotenv
+from functools import wraps
 import os
 
-# Importar helpers (según tu estructura)
-# from Helpers.mongoDB import MongoDB
-# from Helpers.elastic import ElasticSearch
-# from Helpers.funciones import funciones
+# Importar solo lo que SÍ vamos a usar por ahora
+from elastic import ElasticSearch
+from functions import funciones
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
@@ -21,27 +17,20 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
-# ================== CONFIGURACIÓN MONGODB ==================
-#MONGO_URI = os.getenv('MONGO_URI')
-#MONGO_DB = os.getenv('MONGO_DB')
-#MONGO_COLECCION = os.getenv('MONGO_COLECCION', 'usuario_roles')
-
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
 ELASTIC_CLOUD_URL = os.getenv('ELASTIC_CLOUD_URL')
-ELASTIC_API_KEY = os.getenv('ELASTIC_API_KEY')
+ELASTIC_API_KEY   = os.getenv('ELASTIC_API_KEY')
 
 # ================== METADATOS DE LA APLICACIÓN ==================
 VERSION_APP = "1.0.0"
 CREATOR_APP = "MabelAyala"
 
 # ================== INICIALIZAR CONEXIONES ==================
-# mongo = MongoDB(MONGO_URI, MONGO_DB, MONGO_COLECCION)
 elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
-utils = funciones() 
+utils = funciones()   # instancia de la clase funciones
+
 
 # ================== DECORADOR PARA RUTAS PROTEGIDAS ==================
-from functools import wraps
-
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
@@ -68,28 +57,19 @@ def landing():
 def login():
     """
     Página de login.
-    GET  -> muestra el formulario
-    POST -> valida credenciales contra MongoDB
+    Por ahora NO valida contra MongoDB, solo simula el login.
     """
     error_message = None
 
     if request.method == 'POST':
-        usuario = request.form.get('usuario')
-        password = request.form.get('password')
+        usuario = request.form.get('usuario') or "invitado"
 
-        # Aquí usamos un método de tu helper de Mongo.
-        # Ajusta el nombre según cómo lo implementes en Helpers/mongoDB.py
-        user_doc = mongo.validar_usuario(usuario, password)
+        # Simulamos login exitoso sin Mongo
+        session['usuario'] = usuario
+        session['rol'] = 'Usuario'
 
-        if user_doc:
-            # Guardar datos mínimos en sesión
-            session['usuario'] = usuario
-            session['rol'] = user_doc.get('rol', 'Usuario')
-
-            flash('Inicio de sesión exitoso.', 'success')
-            return redirect(url_for('admin'))
-        else:
-            error_message = "Usuario o contraseña incorrectos."
+        flash('Inicio de sesión simulado (sin MongoDB).', 'success')
+        return redirect(url_for('admin'))
 
     return render_template(
         'login.html',
@@ -111,14 +91,14 @@ def logout():
 @login_required
 def admin():
     """
-    Panel admin principal.
-    Más adelante aquí pondremos enlaces a:
-    - Admin usuarios (Mongo)
+    Panel admin principal (placeholder).
+    Más adelante aquí pondremos:
+    - Admin usuarios
     - Admin Elastic
     - Carga de archivos / índice PLN
     """
     return render_template(
-        'admin.html',   # cuando lo tengamos creado
+        'admin.html',
         version=VERSION_APP,
         creador=CREATOR_APP,
         usuario=session.get('usuario'),
@@ -130,7 +110,6 @@ def admin():
 
 @app.route('/about')
 def about():
-    # Por ahora algo sencillo. Luego puedes crear about.html.
     return render_template(
         'about.html',
         version=VERSION_APP,
@@ -140,7 +119,6 @@ def about():
 
 @app.route('/contacto')
 def contacto():
-    # Igual, más adelante puedes hacer contacto.html bonito.
     return render_template(
         'contacto.html',
         version=VERSION_APP,
@@ -148,19 +126,14 @@ def contacto():
     )
 
 
-# ================== MAIN ==================
+# ================== MAIN (solo cuando corres localmente) ==================
 if __name__ == '__main__':
     # Crear carpetas necesarias (p.e. para uploads)
-    Funciones.crear_carpeta('static/uploads')
+    utils.crear_carpeta('static/uploads')
 
-    # Verificar conexiones
+    # Verificar conexión a Elastic
     print("\n" + "=" * 50)
-    print("VERIFICANDO CONEXIONES")
-
-    if mongo.test_connection():
-        print("✅ MongoDB Atlas: Conectado")
-    else:
-        print("❌ MongoDB Atlas: Error de conexión")
+    print("VERIFICANDO CONEXIÓN A ELASTICSEARCH")
 
     if elastic.test_connection():
         print("✅ ElasticSearch Cloud: Conectado")
@@ -169,5 +142,5 @@ if __name__ == '__main__':
 
     print("=" * 50 + "\n")
 
-    # Levantar la app
+    # Levantar la app en local
     app.run(debug=True)
