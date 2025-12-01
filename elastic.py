@@ -1,25 +1,46 @@
 from elasticsearch import Elasticsearch, helpers
 from typing import Dict, List, Optional, Any
-import json
 
 
 class ElasticSearch:
-    def __init__(self, cloud_url: str, api_key: str):
+    def __init__(
+        self,
+        cloud_id: str,
+        api_key: str,
+        index_name: str = "lenguaje_controlado",
+    ):
         """
         Inicializa conexión a ElasticSearch Cloud
 
         Args:
-            cloud_url: URL del cluster de Elastic Cloud
-            api_key: API Key para autenticación
+            cloud_id: Cloud ID de Elastic Cloud (ELASTIC_CLOUD_URL)
+            api_key: API Key para autenticación (ELASTIC_API_KEY)
+            index_name: índice por defecto donde se guardan/buscan los docs
         """
-        self.client = Elasticsearch(
-            cloud_url,
-            api_key=api_key,
-            verify_certs=True,
-        )
+        self.index_name = index_name
+        self.client: Optional[Elasticsearch] = None
+
+        if cloud_id and api_key:
+            try:
+                self.client = Elasticsearch(
+                    cloud_id=cloud_id,
+                    api_key=api_key,
+                )
+            except Exception as e:
+                print(f"❌ Error al crear cliente de ElasticSearch: {e}")
+        else:
+            print("⚠️ ElasticSearch: faltan CLOUD_ID o API_KEY.")
+
+    # ------------------------------------------------------------------
+    # CONEXIÓN
+    # ------------------------------------------------------------------
 
     def test_connection(self) -> bool:
         """Prueba la conexión a ElasticSearch"""
+        if not self.client:
+            print("❌ ElasticSearch no está configurado.")
+            return False
+
         try:
             info = self.client.info()
             print(f"✅ Conectado a Elastic: {info['version']['number']}")
@@ -40,12 +61,11 @@ class ElasticSearch:
     ) -> bool:
         """
         Crea un nuevo índice
-
-        Args:
-            nombre_index: Nombre del índice
-            mappings: Definición de campos (opcional)
-            settings: Configuración del índice (opcional)
         """
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             body: Dict[str, Any] = {}
             if mappings:
@@ -61,6 +81,10 @@ class ElasticSearch:
 
     def eliminar_index(self, nombre_index: str) -> bool:
         """Elimina un índice"""
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             self.client.indices.delete(index=nombre_index)
             return True
@@ -70,6 +94,10 @@ class ElasticSearch:
 
     def listar_indices(self) -> List[Dict]:
         """Lista todos los índices"""
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return []
+
         try:
             indices = self.client.cat.indices(format="json")
             return indices
@@ -89,12 +117,11 @@ class ElasticSearch:
     ) -> bool:
         """
         Indexa un documento en ElasticSearch
-
-        Args:
-            index: Nombre del índice
-            documento: Documento a indexar
-            doc_id: ID del documento (opcional)
         """
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             if doc_id:
                 self.client.index(index=index, id=doc_id, document=documento)
@@ -108,11 +135,11 @@ class ElasticSearch:
     def indexar_bulks(self, index: str, documentos: List[Dict]) -> bool:
         """
         Indexa múltiples documentos usando la API bulk.
-
-        Args:
-            index: Nombre del índice
-            documentos: Lista de documentos a indexar
         """
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             actions = [
                 {
@@ -131,20 +158,20 @@ class ElasticSearch:
             return False
 
     # ------------------------------------------------------------------
-    # BÚSQUEDAS
+    # BÚSQUEDAS GENERALES
     # ------------------------------------------------------------------
 
     def buscar(self, index: str, query: Dict, size: int = 10) -> Dict:
         """
-        Realiza una búsqueda en ElasticSearch
-
-        Args:
-            index: Nombre del índice
-            query: Query de búsqueda (DSL de Elastic)
-            size: Número de resultados
+        Realiza una búsqueda en ElasticSearch (query en formato DSL).
         """
+        if not self.client:
+            return {"success": False, "error": "Cliente Elastic no inicializado."}
+
         try:
-            response = self.client.search(index=index, body=query, size=size)
+            # En cliente 9.x se usa el parámetro 'query='
+            q = query.get("query", query)
+            response = self.client.search(index=index, query=q, size=size)
             return {
                 "success": True,
                 "total": response["hits"]["total"]["value"],
@@ -165,35 +192,28 @@ class ElasticSearch:
     ) -> Dict:
         """
         Búsqueda simple de texto en campos específicos.
-
-        Args:
-            index: Nombre del índice
-            texto: Texto a buscar
-            campos: Lista de campos donde buscar (si es None, busca en todos)
-            size: Número de resultados
         """
+        if not self.client:
+            return {"success": False, "error": "Cliente Elastic no inicializado."}
+
         try:
             if campos:
                 # Búsqueda en campos específicos
                 query = {
-                    "query": {
-                        "multi_match": {
-                            "query": texto,
-                            "fields": campos,
-                        }
+                    "multi_match": {
+                        "query": texto,
+                        "fields": campos,
                     }
                 }
             else:
                 # Búsqueda general en todos los campos indexados
                 query = {
-                    "query": {
-                        "query_string": {
-                            "query": texto,
-                        }
+                    "query_string": {
+                        "query": texto,
                     }
                 }
 
-            response = self.client.search(index=index, body=query, size=size)
+            response = self.client.search(index=index, query=query, size=size)
             return {
                 "success": True,
                 "total": response["hits"]["total"]["value"],
@@ -206,11 +226,70 @@ class ElasticSearch:
             }
 
     # ------------------------------------------------------------------
+    # BÚSQUEDA ESPECÍFICA PARA EL BUSCADOR WEB
+    # ------------------------------------------------------------------
+
+    def search_terms(self, text: str, size: int = 20) -> List[Dict]:
+        """
+        Búsqueda pensada para el buscador web.
+        Usa el índice por defecto (self.index_name) y 
+        devuelve una lista simplificada de resultados.
+        """
+        if not self.client:
+            print("⚠️ search_terms llamado sin cliente Elastic.")
+            return []
+
+        if not text:
+            return []
+
+        query = {
+            "multi_match": {
+                "query": text,
+                "fields": [
+                    "term_child^3",
+                    "term_parent^2",
+                    "definition",
+                    "pdf_text",
+                ],
+            }
+        }
+
+        try:
+            resp = self.client.search(
+                index=self.index_name,
+                query=query,
+                size=size,
+            )
+        except Exception as e:
+            print("❌ Error al buscar en Elastic:", e)
+            return []
+
+        resultados: List[Dict] = []
+        for hit in resp.get("hits", {}).get("hits", []):
+            src = hit.get("_source", {})
+            resultados.append(
+                {
+                    "score": hit.get("_score"),
+                    "term_parent": src.get("term_parent"),
+                    "term_child": src.get("term_child"),
+                    "definition": src.get("definition"),
+                    "source_url": src.get("source_url"),
+                    "file_name": src.get("file_name"),
+                }
+            )
+
+        return resultados
+
+    # ------------------------------------------------------------------
     # CRUD DOCUMENTOS
     # ------------------------------------------------------------------
 
     def obtener_documento(self, index: str, doc_id: str) -> Optional[Dict]:
         """Obtiene un documento por su ID"""
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return None
+
         try:
             response = self.client.get(index=index, id=doc_id)
             return response["_source"]
@@ -225,6 +304,10 @@ class ElasticSearch:
         datos: Dict,
     ) -> bool:
         """Actualiza un documento existente"""
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             self.client.update(index=index, id=doc_id, doc=datos)
             return True
@@ -234,6 +317,10 @@ class ElasticSearch:
 
     def eliminar_documento(self, index: str, doc_id: str) -> bool:
         """Elimina un documento"""
+        if not self.client:
+            print("❌ Cliente Elastic no inicializado.")
+            return False
+
         try:
             self.client.delete(index=index, id=doc_id)
             return True
@@ -242,9 +329,11 @@ class ElasticSearch:
             return False
 
     # ------------------------------------------------------------------
-    # CONEXIÓN
+    # CIERRE
     # ------------------------------------------------------------------
 
     def close(self):
         """Cierra la conexión"""
-        self.client.close()
+        if self.client:
+            self.client.close()
+
