@@ -3,44 +3,30 @@ from typing import Dict, List, Optional, Any
 
 
 class ElasticSearch:
-    def __init__(
-        self,
-        cloud_id: str,
-        api_key: str,
-        index_name: str = "lenguaje_controlado",
-    ):
+    class ElasticSearch:
+    def __init__(self, base_url: str, api_key: str):
         """
-        Inicializa conexión a ElasticSearch Cloud
+        Inicializa conexión a ElasticSearch usando una URL normal.
 
-        Args:
-            cloud_id: Cloud ID de Elastic Cloud (ELASTIC_CLOUD_URL)
-            api_key: API Key para autenticación (ELASTIC_API_KEY)
-            index_name: índice por defecto donde se guardan/buscan los docs
+        base_url: por ejemplo
+        https://fe68aba5b3194046b86205bc65ddcf71.us-central1.gcp.cloud.es.io:443
         """
-        self.index_name = index_name
-        self.client: Optional[Elasticsearch] = None
+        if not base_url or not api_key:
+            print("⚠️ ElasticSearch: falta ELASTIC_URL o ELASTIC_API_KEY.")
+            self.client = None
+            return
 
-        if cloud_id and api_key:
-            try:
-                self.client = Elasticsearch(
-                    cloud_id=cloud_id,
-                    api_key=api_key,
-                )
-            except Exception as e:
-                print(f"❌ Error al crear cliente de ElasticSearch: {e}")
-        else:
-            print("⚠️ ElasticSearch: faltan CLOUD_ID o API_KEY.")
-
-    # ------------------------------------------------------------------
-    # CONEXIÓN
-    # ------------------------------------------------------------------
+        self.client = Elasticsearch(
+            base_url,
+            api_key=api_key,
+            verify_certs=True,
+        )
 
     def test_connection(self) -> bool:
         """Prueba la conexión a ElasticSearch"""
-        if not self.client:
-            print("❌ ElasticSearch no está configurado.")
+        if self.client is None:
+            print("⚠️ ElasticSearch: cliente no inicializado.")
             return False
-
         try:
             info = self.client.info()
             print(f"✅ Conectado a Elastic: {info['version']['number']}")
