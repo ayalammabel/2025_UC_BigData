@@ -18,7 +18,7 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
-ELASTIC_CLOUD_URL = os.getenv('ELASTIC_CLOUD_URL','3bb2614ba24245c88fe02eeed02152dc:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyRmZTY4YWJhNWIzMTk0MDQ2Yjg2MjA1YmM2NWRkY2Y3MSQxOTMzOWI2ZThiNDY0MjE2OWZlOTVjMTc4YWU4OTc4ZQ==')
+ELASTIC_CLOUD_URL = os.getenv('ELASTIC_URL',"https://fe68aba5b3194046b86205bc65ddcf71.us-central1.gcp.cloud.es.io:443")
 ELASTIC_API_KEY   = os.getenv('ELASTIC_API_KEY','ZXphVTBwb0JBS1JFTTg4bzc4clY6UWlMaXQ5ZHVyZEVzTEh5amJtOWpEZw==')
 
 # ================== METADATOS DE LA APLICACIÓN ==================
@@ -26,7 +26,7 @@ VERSION_APP = "1.0.0"
 CREATOR_APP = "MabelAyala"
 
 # ================== INICIALIZAR CONEXIONES ==================
-elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
+elastic = ElasticSearch(ELASTIC_URL, ELASTIC_API_KEY)
 utils = funciones()   # instancia de la clase funciones
 
 
@@ -40,8 +40,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return wrapper
 
-
-# ================== RUTAS ==================
 
 # ================== RUTAS ==================
 
