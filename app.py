@@ -23,6 +23,10 @@ MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB", "proyecto_bigData")
 MONGO_COLECCION = os.getenv("MONGO_COLECCION", "usuario_roles")
 
+print("DEBUG MONGO CONFIG:", MONGO_URI, MONGO_DB, MONGO_COLECCION)
+if not MONGO_URI:
+    print("⚠️ ATENCIÓN: MONGO_URI no está definida. Revisa el .env.")
+
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
 ELASTIC_CLOUD_URL = os.getenv(
     'ELASTIC_URL',
@@ -38,7 +42,6 @@ VERSION_APP = "1.0.0"
 CREATOR_APP = "MabelAyala"
 
 # ================== INICIALIZAR CONEXIONES ==================
-# 👇 OJO: aquí uso ELASTIC_CLOUD_URL (antes estaba ELASTIC_URL)
 elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
 utils = funciones()   # instancia de la clase funciones
 
@@ -65,6 +68,7 @@ def landing():
         version=VERSION_APP,
         creador=CREATOR_APP
     )
+
 
 # Buscador en "/buscador" (vista)
 @app.route('/buscador')
@@ -105,6 +109,7 @@ def api_buscar():
         return jsonify({"error": "Error al conectar con ElasticSearch"}), 500
 
 
+# ====== LOGIN CON MONGO ======
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """
@@ -119,25 +124,35 @@ def login():
         if not usuario or not password:
             error_message = 'Por favor ingresa usuario y contraseña.'
         else:
-            # Validar usuario en MongoDB (igual que el profe)
-            user_data = mongo.validar_usuario(
-                usuario,
-                password,
-                MONGO_URI,
-                MONGO_DB,
-                MONGO_COLECCION
-            )
+            print("\n=== DEBUG LOGIN ===")
+            print("Usuario enviado:", usuario)
+
+            try:
+                user_data = mongo.validar_usuario(
+                    usuario,
+                    password,
+                    MONGO_URI,
+                    MONGO_DB,
+                    MONGO_COLECCION
+                )
+                print("user_data devuelto por Mongo:", user_data)
+            except Exception as e:
+                print("ERROR VALIDANDO USUARIO EN MONGO:", repr(e))
+                error_message = 'Error al conectar con la base de datos.'
+                user_data = None
 
             if user_data:
                 # Guardar sesión
-                session['usuario'] = usuario
+                session['usuario'] = user_data.get('usuario', usuario)
+                session['rol'] = user_data.get('rol', 'Usuario')
                 session['permisos'] = user_data.get('permisos', {})
                 session['logged_in'] = True
 
                 flash('Inicio de sesión exitoso.', 'success')
                 return redirect(url_for('admin'))
             else:
-                error_message = 'Usuario o contraseña incorrectos.'
+                if not error_message:
+                    error_message = 'Usuario o contraseña incorrectos.'
 
     return render_template(
         'login.html',
@@ -203,7 +218,6 @@ if __name__ == '__main__':
     print("\n" + "=" * 50)
     print("VERIFICANDO CONEXIÓN A ELASTICSEARCH")
 
-    # 👇 En el cliente se llama ping(), no test_connection()
     if elastic.ping():
         print("✅ ElasticSearch Cloud: Conectado")
     else:
