@@ -47,20 +47,49 @@
             }
 
             try {
+                // 👇 ya no mandamos index, el backend usa lenguaje_controlado por defecto
                 const url = `/api/buscar?q=${encodeURIComponent(q)}&size=10`;
                 const resp = await fetch(url);
                 const data = await resp.json();
+
+                // 👉 AQUÍ EMPIEZA LA PARTE NUEVA BONITA
 
                 if (!resp.ok) {
                     resultadosDiv.innerHTML = `<p>Error: ${data.error || 'Error en la búsqueda'}</p>`;
                     return;
                 }
 
-                // Mostrar JSON completo (para prueba)
-                resultadosDiv.innerHTML = `
-                    <h3>Respuesta cruda de Elastic</h3>
-                    <pre>${JSON.stringify(data, null, 2)}</pre>
-                `;
+                const hits = (data.hits && data.hits.hits) ? data.hits.hits : [];
+
+                if (hits.length === 0) {
+                    resultadosDiv.innerHTML = '<p>No se encontraron resultados.</p>';
+                    return;
+                }
+
+                let html = '<h3>Resultados</h3>';
+
+                hits.forEach((hit) => {
+                    const src = hit._source || {};
+                    const termino = src.termino || src.titulo || 'Sin título';
+                    const definicion = src.definicion || src.descripcion || '';
+
+                    html += `
+                        <div class="resultado">
+                            <strong>${termino}</strong><br>
+                            ${definicion ? `<p>${definicion}</p>` : ''}
+                            <small>_score: ${hit._score ?? ''}</small>
+                            <details>
+                                <summary>Ver JSON completo</summary>
+                                <pre>${JSON.stringify(src, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `;
+                });
+
+                resultadosDiv.innerHTML = html;
+
+                // 👉 AQUÍ TERMINA LA PARTE NUEVA
+
             } catch (err) {
                 console.error(err);
                 resultadosDiv.innerHTML = '<p>Error de conexión con el backend.</p>';
@@ -69,3 +98,4 @@
     </script>
 </body>
 </html>
+
