@@ -18,6 +18,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
+# ================== CONFIGURACIÓN MONGO ==================
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB = os.getenv("MONGO_DB", "proyecto_bigData")
+MONGO_COLECCION = os.getenv("MONGO_COLECCION", "usuario_roles")
+
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
 ELASTIC_CLOUD_URL = os.getenv(
     'ELASTIC_URL',
