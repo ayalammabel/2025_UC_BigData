@@ -1,7 +1,7 @@
 # app.py
 from flask import (
     Flask, render_template, request,
-    redirect, url_for, session, flash
+    redirect, url_for, session, flash, jsonify
 )
 from dotenv import load_dotenv
 from functools import wraps
@@ -18,15 +18,22 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
 # ================== CONFIGURACIÓN ELASTICSEARCH CLOUD ==================
-ELASTIC_CLOUD_URL = os.getenv('ELASTIC_URL',"https://fe68aba5b3194046b86205bc65ddcf71.us-central1.gcp.cloud.es.io:443")
-ELASTIC_API_KEY   = os.getenv('ELASTIC_API_KEY','ZXphVTBwb0JBS1JFTTg4bzc4clY6UWlMaXQ5ZHVyZEVzTEh5amJtOWpEZw==')
+ELASTIC_CLOUD_URL = os.getenv(
+    'ELASTIC_URL',
+    "https://fe68aba5b3194046b86205bc65ddcf71.us-central1.gcp.cloud.es.io:443"
+)
+ELASTIC_API_KEY = os.getenv(
+    'ELASTIC_API_KEY',
+    'ZXphVTBwb0JBS1JFTTg4bzc4clY6UWlMaXQ5ZHVyZEVzTEh5amJtOWpEZw=='
+)
 
 # ================== METADATOS DE LA APLICACIÓN ==================
 VERSION_APP = "1.0.0"
 CREATOR_APP = "MabelAyala"
 
 # ================== INICIALIZAR CONEXIONES ==================
-elastic = ElasticSearch(ELASTIC_URL, ELASTIC_API_KEY)
+# 👇 OJO: aquí uso ELASTIC_CLOUD_URL (antes estaba ELASTIC_URL)
+elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
 utils = funciones()   # instancia de la clase funciones
 
 
@@ -53,12 +60,11 @@ def landing():
         creador=CREATOR_APP
     )
 
-# Buscador en "/buscador"
+# Buscador en "/buscador" (vista)
 @app.route('/buscador')
 def buscador():
     """
     Página pública del buscador de términos.
-    Más adelante aquí conectamos con ElasticSearch.
     """
     return render_template(
         'buscador.html',
@@ -66,6 +72,31 @@ def buscador():
         creador=CREATOR_APP
     )
 
+
+# ====== API del buscador (conexión real a Elastic) ======
+@app.route('/api/buscar', methods=['GET'])
+def api_buscar():
+    """
+    Endpoint que consulta ElasticSearch.
+    Ejemplo: /api/buscar?q=palabra&index=mi_indice
+    """
+    query = request.args.get('q', '').strip()
+    index_name = request.args.get('index', 'mi_indice')
+    size = int(request.args.get('size', 10))
+
+    if not query:
+        return jsonify({"error": "Parámetro 'q' es obligatorio"}), 400
+
+    try:
+        resultados = elastic.buscar_texto(
+            index_name=index_name,
+            query=query,
+            size=size
+        )
+        return jsonify(resultados)
+    except Exception as e:
+        print("Error al buscar en Elastic:", e)
+        return jsonify({"error": "Error al conectar con ElasticSearch"}), 500
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -150,7 +181,8 @@ if __name__ == '__main__':
     print("\n" + "=" * 50)
     print("VERIFICANDO CONEXIÓN A ELASTICSEARCH")
 
-    if elastic.test_connection():
+    # 👇 En el cliente se llama ping(), no test_connection()
+    if elastic.ping():
         print("✅ ElasticSearch Cloud: Conectado")
     else:
         print("❌ ElasticSearch Cloud: Error de conexión")
@@ -159,3 +191,4 @@ if __name__ == '__main__':
 
     # Levantar la app en local
     app.run(debug=True)
+
