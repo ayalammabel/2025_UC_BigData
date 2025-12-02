@@ -10,6 +10,7 @@ import os
 # Importar solo lo que SÍ vamos a usar por ahora
 from elastic import ElasticSearch
 from functions import funciones
+import mongo
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
