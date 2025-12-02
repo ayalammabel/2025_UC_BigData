@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Panel admin – Proyecto BigData{% endblock %}
+
+{% block content %}
+<main class="container mt-4">
+    <h1 class="h3 mb-3">Panel de administración</h1>
+
+    <p class="mb-3">
+        Hola, <strong>{{ usuario }}</strong>.
+    </p>
+
+    <p>
+        Desde este panel podrás:
+    </p>
+    <ul>
+        <li>Ver el resumen del índice de lenguaje controlado en Elastic.</li>
+        <li>Listar usuarios registrados (si implementas /listar-usuarios).</li>
+        <li>Acceder al buscador avanzado.</li>
+    </ul>
+
+    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">
+        Cerrar sesión
+    </a>
+</main>
+{% endblock %}
