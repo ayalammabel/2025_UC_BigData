@@ -81,7 +81,7 @@ def api_buscar():
     Ejemplo: /api/buscar?q=palabra&index=mi_indice
     """
     query = request.args.get('q', '').strip()
-    index_name = request.args.get('index', 'mi_indice')
+    index_name = request.args.get('index', 'lenguaje_controlado')
     size = int(request.args.get('size', 10))
 
     if not query:
