@@ -3,7 +3,10 @@ from typing import Dict, List, Optional, Any
 
 
 class ElasticSearch:
-    class ElasticSearch:
+    """
+    Cliente sencillo para conectarse a Elastic Cloud usando API Key.
+    """
+   
     def __init__(self, base_url: str, api_key: str):
         """
         Inicializa conexión a ElasticSearch usando una URL normal.
