@@ -47,7 +47,7 @@
             }
 
             try {
-                const url = `/api/buscar?q=${encodeURIComponent(q)}&index=mi_indice&size=10`;
+                const url = `/api/buscar?q=${encodeURIComponent(q)}&size=10`;
                 const resp = await fetch(url);
                 const data = await resp.json();
 
