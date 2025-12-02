@@ -103,20 +103,36 @@ def api_buscar():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """
-    Página de login.
-    Por ahora NO valida contra MongoDB, solo simula el login.
+    Página de login con validación REAL en MongoDB.
     """
     error_message = None
 
     if request.method == 'POST':
-        usuario = request.form.get('usuario') or "invitado"
+        usuario = request.form.get('usuario', '').strip()
+        password = request.form.get('password', '').strip()
 
-        # Simulamos login exitoso sin Mongo
-        session['usuario'] = usuario
-        session['rol'] = 'Usuario'
+        if not usuario or not password:
+            error_message = 'Por favor ingresa usuario y contraseña.'
+        else:
+            # Validar usuario en MongoDB (igual que el profe)
+            user_data = mongo.validar_usuario(
+                usuario,
+                password,
+                MONGO_URI,
+                MONGO_DB,
+                MONGO_COLECCION
+            )
 
-        flash('Inicio de sesión simulado (sin MongoDB).', 'success')
-        return redirect(url_for('admin'))
+            if user_data:
+                # Guardar sesión
+                session['usuario'] = usuario
+                session['permisos'] = user_data.get('permisos', {})
+                session['logged_in'] = True
+
+                flash('Inicio de sesión exitoso.', 'success')
+                return redirect(url_for('admin'))
+            else:
+                error_message = 'Usuario o contraseña incorrectos.'
 
     return render_template(
         'login.html',
