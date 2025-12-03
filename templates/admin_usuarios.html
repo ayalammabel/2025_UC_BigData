@@ -117,13 +117,22 @@
 
 {% block extra_js %}
 <script>
+let usuariosAdminCache = [];
+let modoUsuario = 'crear';       // 'crear' o 'editar'
+let usuarioOriginal = null;      // para saber a quién estamos editando
+
 document.addEventListener('DOMContentLoaded', function () {
     cargarUsuariosAdmin();
 
     const formCrear = document.getElementById('formCrearUsuario');
     formCrear.addEventListener('submit', function (e) {
         e.preventDefault();
-        crearUsuarioNuevo();
+        guardarUsuarioDesdeModal();
+    });
+
+    const btnCrear = document.getElementById('btnAbrirCrearUsuario');
+    btnCrear.addEventListener('click', function () {
+        prepararModalCrear();
     });
 });
 
@@ -146,27 +155,35 @@ function cargarUsuariosAdmin() {
             return resp.json();
         })
         .then(data => {
+            usuariosAdminCache = Array.isArray(data) ? data : [];
             tabla.innerHTML = '';
 
-            if (!Array.isArray(data) || data.length === 0) {
+            if (usuariosAdminCache.length === 0) {
                 alertBox.classList.remove('d-none');
                 return;
             }
 
             alertBox.classList.add('d-none');
 
-            data.forEach(user => {
+            usuariosAdminCache.forEach(user => {
                 const tr = document.createElement('tr');
+                const usuarioEsc = user.usuario ? user.usuario.replace(/"/g, '&quot;') : '';
                 tr.innerHTML = `
-                    <td>${user.usuario || ''}</td>
+                    <td>${usuarioEsc}</td>
                     <td>${user.password || ''}</td>
                     <td class="text-center">${badgeSiNo(user.login)}</td>
                     <td class="text-center">${badgeSiNo(user.admin_usuarios)}</td>
                     <td class="text-center">${badgeSiNo(user.admin_elastic)}</td>
                     <td class="text-center">${badgeSiNo(user.admin_data_elastic)}</td>
                     <td class="text-center">
-                        <button class="btn btn-warning btn-sm me-1" disabled>Editar</button>
-                        <button class="btn btn-danger btn-sm" disabled>Eliminar</button>
+                        <button class="btn btn-warning btn-sm me-1"
+                                onclick="abrirEditarUsuario('${usuarioEsc}')">
+                            Editar
+                        </button>
+                        <button class="btn btn-danger btn-sm"
+                                onclick="eliminarUsuario('${usuarioEsc}')">
+                            Eliminar
+                        </button>
                     </td>
                 `;
                 tabla.appendChild(tr);
@@ -178,7 +195,58 @@ function cargarUsuariosAdmin() {
         });
 }
 
-function crearUsuarioNuevo() {
+/* ===== Modal: preparar para CREAR ===== */
+function prepararModalCrear() {
+    modoUsuario = 'crear';
+    usuarioOriginal = null;
+
+    const titulo = document.getElementById('modalCrearUsuarioLabel');
+    titulo.textContent = 'Crear nuevo usuario';
+
+    document.getElementById('nuevoUsuario').value = '';
+    document.getElementById('nuevoPassword').value = '';
+    document.getElementById('permLogin').checked = true;
+    document.getElementById('permAdminUsuarios').checked = false;
+    document.getElementById('permAdminElastic').checked = false;
+    document.getElementById('permAdminDataElastic').checked = false;
+
+    const errorDiv = document.getElementById('crearUsuarioError');
+    errorDiv.classList.add('d-none');
+    errorDiv.textContent = '';
+}
+
+/* ===== Modal: preparar para EDITAR ===== */
+function abrirEditarUsuario(usuario) {
+    const user = usuariosAdminCache.find(u => u.usuario === usuario);
+    if (!user) {
+        alert('No se encontró la información del usuario.');
+        return;
+    }
+
+    modoUsuario = 'editar';
+    usuarioOriginal = user.usuario;
+
+    const titulo = document.getElementById('modalCrearUsuarioLabel');
+    titulo.textContent = 'Editar usuario';
+
+    document.getElementById('nuevoUsuario').value = user.usuario || '';
+    document.getElementById('nuevoPassword').value = user.password || '';
+    document.getElementById('permLogin').checked = !!user.login;
+    document.getElementById('permAdminUsuarios').checked = !!user.admin_usuarios;
+    document.getElementById('permAdminElastic').checked = !!user.admin_elastic;
+    document.getElementById('permAdminDataElastic').checked = !!user.admin_data_elastic;
+
+    const errorDiv = document.getElementById('crearUsuarioError');
+    errorDiv.classList.add('d-none');
+    errorDiv.textContent = '';
+
+    const modalEl = document.getElementById('modalCrearUsuario');
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+}
+
+/* ===== Guardar (crear o editar) desde el modal ===== */
+function guardarUsuarioDesdeModal() {
     const usuario = document.getElementById('nuevoUsuario').value.trim();
     const password = document.getElementById('nuevoPassword').value.trim();
     const login = document.getElementById('permLogin').checked;
@@ -196,42 +264,71 @@ function crearUsuarioNuevo() {
         return;
     }
 
-    fetch('/api/usuarios', {
-        method: 'POST',
+    const payload = {
+        usuario: usuario,
+        password: password,
+        login: login,
+        admin_usuarios: adminUsuarios,
+        admin_elastic: adminElastic,
+        admin_data_elastic: adminDataElastic
+    };
+
+    let url = '/api/usuarios';
+    let method = 'POST';
+
+    if (modoUsuario === 'editar' && usuarioOriginal) {
+        url = '/api/usuarios/' + encodeURIComponent(usuarioOriginal);
+        method = 'PUT';
+    }
+
+    fetch(url, {
+        method: method,
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            usuario: usuario,
-            password: password,
-            login: login,
-            admin_usuarios: adminUsuarios,
-            admin_elastic: adminElastic,
-            admin_data_elastic: adminDataElastic
-        })
+        body: JSON.stringify(payload)
     })
     .then(resp => resp.json().then(body => ({ ok: resp.ok, body })))
     .then(result => {
         if (!result.ok) {
-            throw new Error(result.body.error || 'Error al crear usuario');
+            throw new Error(result.body.error || 'Error al guardar usuario');
         }
 
-        // Cerrar modal
         const modalEl = document.getElementById('modalCrearUsuario');
         const modal = bootstrap.Modal.getInstance(modalEl);
         modal.hide();
 
-        // Limpiar formulario
         document.getElementById('formCrearUsuario').reset();
         document.getElementById('permLogin').checked = true;
 
-        // Recargar tabla
         cargarUsuariosAdmin();
     })
     .catch(err => {
-        console.error('Error creando usuario:', err);
+        console.error('Error guardando usuario:', err);
         errorDiv.textContent = err.message;
         errorDiv.classList.remove('d-none');
+    });
+}
+
+/* ===== Eliminar usuario ===== */
+function eliminarUsuario(usuario) {
+    if (!confirm(`¿Seguro deseas eliminar el usuario "${usuario}"?`)) {
+        return;
+    }
+
+    fetch('/api/usuarios/' + encodeURIComponent(usuario), {
+        method: 'DELETE'
+    })
+    .then(resp => resp.json().then(body => ({ ok: resp.ok, body })))
+    .then(result => {
+        if (!result.ok) {
+            throw new Error(result.body.error || 'Error al eliminar usuario');
+        }
+        cargarUsuariosAdmin();
+    })
+    .catch(err => {
+        console.error('Error eliminando usuario:', err);
+        alert(err.message);
     });
 }
 </script>
