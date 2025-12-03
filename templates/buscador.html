@@ -133,17 +133,6 @@ form.addEventListener('submit', async function (e) {
                         ${fuente ? `<span class="badge text-bg-light">Fuente: ${fuente}</span>` : ''}
                         ${urlDoc ? `<a href="${urlDoc}" target="_blank" rel="noopener" class="small">Ver documento fuente</a>` : ''}
                     </div>
-
-                    <button class="btn btn-sm btn-outline-secondary"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#raw-${index}">
-                        Ver JSON completo
-                    </button>
-
-                    <div class="collapse mt-2" id="raw-${index}">
-                        <pre class="small bg-light rounded p-2 mb-0">${JSON.stringify(hit, null, 2)}</pre>
-                    </div>
                 </div>
             </article>
             `;
