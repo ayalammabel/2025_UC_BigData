@@ -207,7 +207,60 @@ def listar_usuarios_route():
     except Exception as e:
         print("ERROR LISTANDO USUARIOS:", repr(e))
         return jsonify({"error": str(e)}), 500
+@app.route('/admin/usuarios')
+@login_required
+def admin_usuarios():
+    """
+    Sección de gestión de usuarios.
+    Aquí luego podemos:
+    - listar usuarios (reutilizando /listar-usuarios),
+    - crear / editar / eliminar usuarios, etc.
+    """
+    permisos = session.get('permisos', {})
+    return render_template(
+        'admin_usuarios.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP,
+        usuario=session.get('usuario'),
+        permisos=permisos
+    )
 
+
+@app.route('/admin/elastic')
+@login_required
+def admin_elastic():
+    """
+    Sección de gestión de Elastic.
+    Aquí luego podremos:
+    - ver estado del índice,
+    - hacer pruebas de búsqueda,
+    - ver conteos, etc.
+    """
+    permisos = session.get('permisos', {})
+    return render_template(
+        'admin_elastic.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP,
+        usuario=session.get('usuario'),
+        permisos=permisos
+    )
+
+
+@app.route('/admin/carga-archivos')
+@login_required
+def admin_carga_archivos():
+    """
+    Sección para cargar archivos y enviarlos a Elastic.
+    Más adelante incluimos formularios para subir PDFs / CSV / JSON.
+    """
+    permisos = session.get('permisos', {})
+    return render_template(
+        'admin_carga_archivos.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP,
+        usuario=session.get('usuario'),
+        permisos=permisos
+    )
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
 @app.route('/about')
