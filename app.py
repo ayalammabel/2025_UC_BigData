@@ -192,6 +192,24 @@ def admin():
         rol=session.get('rol')
     )
 
+@app.route('/listar-usuarios', methods=['GET'])
+@login_required
+def listar_usuarios_route():
+    """
+    Devuelve en JSON los usuarios registrados en MongoDB.
+    """
+    # Opcional: control por permisos
+    permisos = session.get('permisos', {})
+    if not permisos.get('admin_usuarios', True):  # pon True mientras pruebas
+        return jsonify({"error": "No autorizado"}), 403
+
+    try:
+        usuarios = mongo.listar_usuarios(MONGO_URI, MONGO_DB, MONGO_COLECCION)
+        print("USUARIOS ENCONTRADOS:", usuarios)
+        return jsonify(usuarios)
+    except Exception as e:
+        print("ERROR LISTANDO USUARIOS:", repr(e))
+        return jsonify({"error": str(e)}), 500
 
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
@@ -199,15 +217,6 @@ def admin():
 def about():
     return render_template(
         'about.html',
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
-
-@app.route('/contacto')
-def contacto():
-    return render_template(
-        'contacto.html',
         version=VERSION_APP,
         creador=CREATOR_APP
     )
