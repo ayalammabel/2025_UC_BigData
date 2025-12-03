@@ -19,9 +19,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
 
 # ================== CONFIGURACIÓN MONGO ==================
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB = os.getenv("MONGO_DB", "proyecto_bigData")
-MONGO_COLECCION = os.getenv("MONGO_COLECCION", "usuario_roles")
+# ================== CONFIGURACIÓN MONGO ==================
+MONGO_URI = "mongodb+srv://mayala:mayala123@mayala.y4cqo9f.mongodb.net/?retryWrites=true&w=majority&appName=mayala"
+MONGO_DB = "proyecto_bigData"
+MONGO_COLECCION = "usuario_roles"
+
+print("DEBUG MONGO CONFIG:", MONGO_URI, MONGO_DB, MONGO_COLECCION)
+
 
 print("DEBUG MONGO CONFIG:", MONGO_URI, MONGO_DB, MONGO_COLECCION)
 if not MONGO_URI:
