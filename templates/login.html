@@ -127,15 +127,21 @@
     // Ejemplo de función para listar usuarios (panel admin)
     // Se puede llamar desde otra página o desde un botón "Ver usuarios"
     function listarUsuarios() {
-        const divCargando = document.getElementById('div_cargando');
-        const contenedor = document.getElementById('ListadoUsuarios');
-        const tablaUsuarios = document.getElementById('tablaUsuarios');
+    const divCargando = document.getElementById('div_cargando');
+    const contenedor = document.getElementById('ListadoUsuarios');
+    const tablaUsuarios = document.getElementById('tablaUsuarios');
 
-        if (divCargando) divCargando.style.display = 'block';
+    if (divCargando) divCargando.style.display = 'block';
 
-        fetch('/listar-usuarios')
-            .then(response => response.json())
-            .then(data => {
+    fetch('/listar-usuarios')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (Array.isArray(data)) {
                 if (tablaUsuarios) {
                     tablaUsuarios.innerHTML = '';
                     data.forEach(usuario => {
@@ -143,19 +149,25 @@
                         row.innerHTML = `
                             <td>${usuario.usuario}</td>
                             <td>${usuario.rol || 'Usuario'}</td>
-                            <td>${usuario.fechaCreacion}</td>
+                            <td>${usuario.fechaCreacion || ''}</td>
                         `;
                         tablaUsuarios.appendChild(row);
                     });
                 }
-                if (divCargando) divCargando.style.display = 'none';
                 if (contenedor) contenedor.style.display = 'block';
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error al obtener la lista de usuarios');
-                if (divCargando) divCargando.style.display = 'none';
-            });
+            } else {
+                console.error('Respuesta inesperada:', data);
+                alert('La API devolvió un formato inesperado.');
+            }
+        })
+        .catch(error => {
+            console.error('Error en listarUsuarios:', error);
+            alert('Error al obtener la lista de usuarios');
+        })
+        .finally(() => {
+            if (divCargando) divCargando.style.display = 'none';
+        });
     }
+   
 </script>
 {% endblock %}
