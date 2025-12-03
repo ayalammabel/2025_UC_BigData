@@ -3,12 +3,236 @@
 
 {% block content %}
 <main class="container py-4">
-    <h1 class="mb-3">Gestión de usuarios</h1>
-    <p class="text-muted">
-        Aquí podrás listar, crear y administrar usuarios del sistema.
-        (En la siguiente fase conectamos esta vista con Mongo y tu tabla de usuarios).
-    </p>
+    <div class="row justify-content-center">
+        <div class="col-lg-11 col-xl-10">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h1 class="h4 mb-0">Gestión de usuarios</h1>
+                <button class="btn btn-success btn-sm"
+                        data-bs-toggle="modal"
+                        data-bs-target="#modalCrearUsuario">
+                    + Crear usuario
+                </button>
+            </div>
+            <p class="text-muted small mb-3">
+                Administra las cuentas que pueden acceder al panel de administración
+                y define sus permisos sobre usuarios, Elastic y carga de datos.
+            </p>
 
-    <!-- Aquí luego metemos tabla + formularios -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Password</th>
+                                    <th class="text-center">Login</th>
+                                    <th class="text-center">Admin Usuarios</th>
+                                    <th class="text-center">Admin Elastic</th>
+                                    <th class="text-center">Admin Data Elastic</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaUsuariosAdmin">
+                                <!-- Se llena por JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="alertUsuarios" class="alert alert-warning mt-3 d-none small" role="alert">
+                No se encontraron usuarios o hubo un problema al cargar la información.
+            </div>
+
+            <div class="mt-3">
+                <a href="{{ url_for('admin') }}" class="btn btn-link btn-sm">
+                    ← Volver al panel de administración
+                </a>
+            </div>
+        </div>
+    </div>
 </main>
+
+<!-- Modal Crear Usuario -->
+<div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-labelledby="modalCrearUsuarioLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form id="formCrearUsuario">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalCrearUsuarioLabel">Crear nuevo usuario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="crearUsuarioError" class="alert alert-danger py-2 px-3 d-none small"></div>
+
+          <div class="mb-3">
+            <label for="nuevoUsuario" class="form-label">Usuario</label>
+            <input type="text" class="form-control" id="nuevoUsuario" required>
+          </div>
+          <div class="mb-3">
+            <label for="nuevoPassword" class="form-label">Contraseña</label>
+            <input type="text" class="form-control" id="nuevoPassword" required>
+          </div>
+
+          <div class="mb-2">
+            <span class="form-label d-block mb-1">Permisos</span>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="permLogin" checked>
+              <label class="form-check-label" for="permLogin">
+                Puede iniciar sesión (login)
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="permAdminUsuarios">
+              <label class="form-check-label" for="permAdminUsuarios">
+                Admin Usuarios
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="permAdminElastic">
+              <label class="form-check-label" for="permAdminElastic">
+                Admin Elastic
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="permAdminDataElastic">
+              <label class="form-check-label" for="permAdminDataElastic">
+                Admin Data Elastic
+              </label>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">Crear usuario</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    cargarUsuariosAdmin();
+
+    const formCrear = document.getElementById('formCrearUsuario');
+    formCrear.addEventListener('submit', function (e) {
+        e.preventDefault();
+        crearUsuarioNuevo();
+    });
+});
+
+function badgeSiNo(valor) {
+    if (valor) {
+        return '<span class="badge bg-success">Sí</span>';
+    }
+    return '<span class="badge bg-secondary">No</span>';
+}
+
+function cargarUsuariosAdmin() {
+    const tabla = document.getElementById('tablaUsuariosAdmin');
+    const alertBox = document.getElementById('alertUsuarios');
+
+    fetch('/api/usuarios')
+        .then(resp => {
+            if (!resp.ok) {
+                throw new Error('HTTP ' + resp.status);
+            }
+            return resp.json();
+        })
+        .then(data => {
+            tabla.innerHTML = '';
+
+            if (!Array.isArray(data) || data.length === 0) {
+                alertBox.classList.remove('d-none');
+                return;
+            }
+
+            alertBox.classList.add('d-none');
+
+            data.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.usuario || ''}</td>
+                    <td>${user.password || ''}</td>
+                    <td class="text-center">${badgeSiNo(user.login)}</td>
+                    <td class="text-center">${badgeSiNo(user.admin_usuarios)}</td>
+                    <td class="text-center">${badgeSiNo(user.admin_elastic)}</td>
+                    <td class="text-center">${badgeSiNo(user.admin_data_elastic)}</td>
+                    <td class="text-center">
+                        <button class="btn btn-warning btn-sm me-1" disabled>Editar</button>
+                        <button class="btn btn-danger btn-sm" disabled>Eliminar</button>
+                    </td>
+                `;
+                tabla.appendChild(tr);
+            });
+        })
+        .catch(err => {
+            console.error('Error cargando usuarios:', err);
+            alertBox.classList.remove('d-none');
+        });
+}
+
+function crearUsuarioNuevo() {
+    const usuario = document.getElementById('nuevoUsuario').value.trim();
+    const password = document.getElementById('nuevoPassword').value.trim();
+    const login = document.getElementById('permLogin').checked;
+    const adminUsuarios = document.getElementById('permAdminUsuarios').checked;
+    const adminElastic = document.getElementById('permAdminElastic').checked;
+    const adminDataElastic = document.getElementById('permAdminDataElastic').checked;
+
+    const errorDiv = document.getElementById('crearUsuarioError');
+    errorDiv.classList.add('d-none');
+    errorDiv.textContent = '';
+
+    if (!usuario || !password) {
+        errorDiv.textContent = 'Usuario y contraseña son obligatorios.';
+        errorDiv.classList.remove('d-none');
+        return;
+    }
+
+    fetch('/api/usuarios', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            usuario: usuario,
+            password: password,
+            login: login,
+            admin_usuarios: adminUsuarios,
+            admin_elastic: adminElastic,
+            admin_data_elastic: adminDataElastic
+        })
+    })
+    .then(resp => resp.json().then(body => ({ ok: resp.ok, body })))
+    .then(result => {
+        if (!result.ok) {
+            throw new Error(result.body.error || 'Error al crear usuario');
+        }
+
+        // Cerrar modal
+        const modalEl = document.getElementById('modalCrearUsuario');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
+        // Limpiar formulario
+        document.getElementById('formCrearUsuario').reset();
+        document.getElementById('permLogin').checked = true;
+
+        // Recargar tabla
+        cargarUsuariosAdmin();
+    })
+    .catch(err => {
+        console.error('Error creando usuario:', err);
+        errorDiv.textContent = err.message;
+        errorDiv.classList.remove('d-none');
+    });
+}
+</script>
+{% endblock %}
+
