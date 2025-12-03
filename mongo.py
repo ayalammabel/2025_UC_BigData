@@ -49,7 +49,72 @@ def listar_usuarios(uri: str, db_name: str, collection_name: str):
         usuarios.append({
             "usuario": doc.get("usuario"),
             "rol": doc.get("rol", "Usuario"),
-            "fechaCreacion": doc.get("fecha_creacion", "")
         })
 
     return usuarios
+
+def listar_usuarios_tabla(uri: str, db_name: str, collection_name: str):
+    """
+    Lista de usuarios con los campos necesarios para la tabla de administración.
+    """
+    client = _get_client(uri)
+    db = client[db_name]
+    coleccion = db[collection_name]
+
+    usuarios = []
+    for doc in coleccion.find(
+        {},
+        {
+            "_id": 0,
+            "usuario": 1,
+            "password": 1,
+            "permisos": 1
+        }
+    ):
+        permisos = doc.get("permisos", {})
+        usuarios.append({
+            "usuario": doc.get("usuario"),
+            "password": doc.get("password"),
+            "login": bool(permisos.get("login", True)),
+            "admin_usuarios": bool(permisos.get("admin_usuarios", False)),
+            "admin_elastic": bool(permisos.get("admin_elastic", False)),
+            "admin_data_elastic": bool(permisos.get("admin_data_elastic", False)),
+        })
+
+    return usuarios
+
+
+def crear_usuario(uri: str, db_name: str, collection_name: str, data: dict):
+    """
+    Crea un nuevo usuario en la colección.
+    OJO: para el proyecto real deberíamos encriptar password,
+    aquí se deja plano solo por fines académicos.
+    """
+    client = _get_client(uri)
+    db = client[db_name]
+    coleccion = db[collection_name]
+
+    usuario = data.get("usuario")
+    if not usuario:
+        raise ValueError("El campo 'usuario' es obligatorio")
+
+    # Verificar si ya existe
+    ya_existe = coleccion.find_one({"usuario": usuario})
+    if ya_existe:
+        raise ValueError("El usuario ya existe")
+
+    doc = {
+        "usuario": usuario,
+        "password": data.get("password", ""),
+        "rol": data.get("rol", "Usuario"),
+        "permisos": {
+            "login": bool(data.get("login", True)),
+            "admin_usuarios": bool(data.get("admin_usuarios", False)),
+            "admin_elastic": bool(data.get("admin_elastic", False)),
+            "admin_data_elastic": bool(data.get("admin_data_elastic", False)),
+        }
+    }
+
+    coleccion.insert_one(doc)
+    return True
+
