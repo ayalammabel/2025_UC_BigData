@@ -261,6 +261,47 @@ def admin_carga_archivos():
         usuario=session.get('usuario'),
         permisos=permisos
     )
+
+@app.route('/api/usuarios', methods=['GET', 'POST'])
+@login_required
+def api_usuarios():
+    """
+    API de administración de usuarios.
+    GET  -> lista usuarios
+    POST -> crea usuario nuevo
+    """
+    permisos = session.get('permisos', {})
+    # Si quieres controlar por permiso:
+    if not permisos.get('admin_usuarios', True):
+        return jsonify({"error": "No autorizado"}), 403
+
+    if request.method == 'GET':
+        try:
+            usuarios = mongo.listar_usuarios_tabla(
+                MONGO_URI,
+                MONGO_DB,
+                MONGO_COLECCION
+            )
+            return jsonify(usuarios)
+        except Exception as e:
+            print("ERROR listando usuarios:", repr(e))
+            return jsonify({"error": "Error al listar usuarios"}), 500
+
+    if request.method == 'POST':
+        try:
+            data = request.get_json(force=True)
+            mongo.crear_usuario(
+                MONGO_URI,
+                MONGO_DB,
+                MONGO_COLECCION,
+                data
+            )
+            return jsonify({"ok": True}), 201
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as e:
+            print("ERROR creando usuario:", repr(e))
+            return jsonify({"error": "Error al crear usuario"}), 500
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
 @app.route('/about')
