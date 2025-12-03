@@ -1,26 +1,90 @@
 {% extends "base.html" %}
 
-{% block title %}Panel admin – Proyecto BigData{% endblock %}
+{% block title %}Panel de administración – Proyecto BigData{% endblock %}
 
 {% block content %}
-<main class="container mt-4">
-    <h1 class="h3 mb-3">Panel de administración</h1>
+<main class="container py-4">
+    <div class="row justify-content-center mb-4">
+        <div class="col-lg-10 col-xl-9">
+            <h1 class="mb-2">Panel de administración</h1>
+            <p class="text-muted mb-1">
+                Hola, <strong>{{ usuario }}</strong>.
+            </p>
+            <p class="text-muted">
+                Desde este panel podrás gestionar usuarios, administrar el índice de lenguaje
+                controlado en ElasticSearch y cargar nuevos archivos para su indexación.
+            </p>
+        </div>
+    </div>
 
-    <p class="mb-3">
-        Hola, <strong>{{ usuario }}</strong>.
-    </p>
+    <div class="row justify-content-center g-4">
+        <div class="col-lg-10 col-xl-9">
 
-    <p>
-        Desde este panel podrás:
-    </p>
-    <ul>
-        <li>Ver el resumen del índice de lenguaje controlado en Elastic.</li>
-        <li>Listar usuarios registrados (si implementas /listar-usuarios).</li>
-        <li>Acceder al buscador avanzado.</li>
-    </ul>
+            <div class="row g-4">
+                {# ==== GESTIONAR USUARIOS ==== #}
+                {% if permisos.get('admin_usuarios', True) %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body d-flex flex-column">
+                            <h2 class="h5 mb-2">Gestión de usuarios</h2>
+                            <p class="text-muted small mb-3 flex-grow-1">
+                                Crear, listar y administrar las cuentas que pueden acceder
+                                al panel de administración de la herramienta.
+                            </p>
+                            <a href="{{ url_for('admin_usuarios') }}"
+                               class="btn btn-outline-primary btn-sm mt-auto">
+                                Ir a gestión de usuarios
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
 
-    <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-sm">
-        Cerrar sesión
-    </a>
+                {# ==== GESTIONAR ELASTIC ==== #}
+                {% if permisos.get('admin_elastic', True) %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body d-flex flex-column">
+                            <h2 class="h5 mb-2">Gestión de Elastic</h2>
+                            <p class="text-muted small mb-3 flex-grow-1">
+                                Consultar el estado del índice de lenguaje controlado,
+                                ver estadísticas básicas y ejecutar tareas de mantenimiento.
+                            </p>
+                            <a href="{{ url_for('admin_elastic') }}"
+                               class="btn btn-outline-primary btn-sm mt-auto">
+                                Ir a gestión de Elastic
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# ==== CARGAR ARCHIVOS A ELASTIC ==== #}
+                {% if permisos.get('admin_data_elastic', True) %}
+                <div class="col-md-4">
+                    <div class="card h-100 shadow-sm border-0">
+                        <div class="card-body d-flex flex-column">
+                            <h2 class="h5 mb-2">Cargar archivos</h2>
+                            <p class="text-muted small mb-3 flex-grow-1">
+                                Subir nuevos documentos (PDFs, CSV, JSON) para que sus
+                                contenidos sean procesados e indexados en ElasticSearch.
+                            </p>
+                            <a href="{{ url_for('admin_carga_archivos') }}"
+                               class="btn btn-outline-primary btn-sm mt-auto">
+                                Ir a carga de archivos
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="mt-4">
+                <a href="{{ url_for('logout') }}" class="btn btn-link btn-sm">
+                    Cerrar sesión
+                </a>
+            </div>
+        </div>
+    </div>
 </main>
 {% endblock %}
