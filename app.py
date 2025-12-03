@@ -178,18 +178,15 @@ def logout():
 @login_required
 def admin():
     """
-    Panel admin principal (placeholder).
-    Más adelante aquí pondremos:
-    - Admin usuarios
-    - Admin Elastic
-    - Carga de archivos / índice PLN
+    Panel admin principal.
     """
+    permisos = session.get('permisos', {})
     return render_template(
         'admin.html',
         version=VERSION_APP,
         creador=CREATOR_APP,
         usuario=session.get('usuario'),
-        rol=session.get('rol')
+        permisos=permisos
     )
 
 @app.route('/listar-usuarios', methods=['GET'])
