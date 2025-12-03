@@ -118,3 +118,62 @@ def crear_usuario(uri: str, db_name: str, collection_name: str, data: dict):
     coleccion.insert_one(doc)
     return True
 
+def actualizar_usuario(uri: str, db_name: str, collection_name: str,
+                       usuario_original: str, data: dict):
+    """
+    Actualiza un usuario identificado por 'usuario_original'.
+    Permite cambiar nombre, password y permisos.
+    """
+    client = _get_client(uri)
+    db = client[db_name]
+    coleccion = db[collection_name]
+
+    if not usuario_original:
+        raise ValueError("Usuario original no especificado")
+
+    nuevo_usuario = data.get("usuario", usuario_original)
+
+    # Si cambia el nombre, validar que no exista otro igual
+    if nuevo_usuario != usuario_original:
+        ya_existe = coleccion.find_one({"usuario": nuevo_usuario})
+        if ya_existe:
+            raise ValueError("Ya existe otro usuario con ese nombre")
+
+    update_doc = {
+        "usuario": nuevo_usuario,
+        "password": data.get("password", ""),
+        "rol": data.get("rol", "Usuario"),
+        "permisos": {
+            "login": bool(data.get("login", True)),
+            "admin_usuarios": bool(data.get("admin_usuarios", False)),
+            "admin_elastic": bool(data.get("admin_elastic", False)),
+            "admin_data_elastic": bool(data.get("admin_data_elastic", False)),
+        }
+    }
+
+    result = coleccion.update_one(
+        {"usuario": usuario_original},
+        {"$set": update_doc}
+    )
+    if result.matched_count == 0:
+        raise ValueError("El usuario no existe")
+
+    return True
+
+
+def eliminar_usuario(uri: str, db_name: str, collection_name: str,
+                     usuario: str):
+    """
+    Elimina un usuario por su nombre.
+    """
+    client = _get_client(uri)
+    db = client[db_name]
+    coleccion = db[collection_name]
+
+    result = coleccion.delete_one({"usuario": usuario})
+    if result.deleted_count == 0:
+        raise ValueError("El usuario no existe")
+    return True
+
+
+
