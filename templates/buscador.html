@@ -1,101 +1,161 @@
-<!-- templates/buscador.html -->
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Buscador - {{ version }}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .resultado {
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin: 8px 0;
+{% extends "base.html" %}
+
+{% block title %}Buscador de términos – Proyecto BigData{% endblock %}
+
+{% block content %}
+<main class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+
+            <h1 class="mb-2">Buscador de términos</h1>
+            <p class="text-muted mb-4">
+                Escribe una palabra clave para buscar en el índice de lenguaje controlado
+                de la Secretaría de la Mujer (normas, lineamientos, portafolios, etc.).
+            </p>
+
+            <!-- Formulario de búsqueda -->
+            <form id="form-busqueda" class="mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-8">
+                        <label for="query" class="form-label">Término de búsqueda</label>
+                        <input type="text"
+                               class="form-control"
+                               id="query"
+                               name="q"
+                               placeholder="Ej.: violencia, cuidado, salud mental…"
+                               required>
+                    </div>
+                    <div class="col-md-4 d-grid">
+                        <button type="submit" class="btn btn-primary mt-md-0 mt-3">
+                            Buscar términos
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Mensajes -->
+            <div id="alerta" class="alert alert-info d-none">
+                Escribe un término y presiona <strong>Buscar</strong> para ver resultados.
+            </div>
+
+            <!-- Spinner de carga -->
+            <div id="cargando" class="text-center my-4 d-none">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando…</span>
+                </div>
+                <p class="mt-2 mb-0 text-muted">
+                    Consultando el índice en ElasticSearch…
+                </p>
+            </div>
+
+            <!-- Resultados -->
+            <div id="resultados" class="mt-4"></div>
+
+        </div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const form = document.getElementById('form-busqueda');
+const resultadosDiv = document.getElementById('resultados');
+const cargandoDiv = document.getElementById('cargando');
+const alertaDiv = document.getElementById('alerta');
+
+function mostrarMensaje(tipo, mensajeHtml) {
+    resultadosDiv.innerHTML = '';
+    alertaDiv.className = 'alert alert-' + tipo;
+    alertaDiv.innerHTML = mensajeHtml;
+    alertaDiv.classList.remove('d-none');
+}
+
+form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const q = document.getElementById('query').value.trim();
+    if (!q) {
+        mostrarMensaje('warning', 'Por favor escribe un término de búsqueda.');
+        return;
+    }
+
+    alertaDiv.classList.add('d-none');
+    resultadosDiv.innerHTML = '';
+    cargandoDiv.classList.remove('d-none');
+
+    try {
+        const url = `/api/buscar?q=${encodeURIComponent(q)}&size=10`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        cargandoDiv.classList.add('d-none');
+
+        if (!resp.ok) {
+            mostrarMensaje('danger', data.error || 'Error en la búsqueda.');
+            return;
         }
-        pre {
-            background: #f7f7f7;
-            padding: 10px;
-            overflow-x: auto;
+
+        const hits = (data.hits && data.hits.hits) ? data.hits.hits : [];
+
+        if (!hits.length) {
+            mostrarMensaje(
+                'info',
+                'No se encontraron resultados para <strong>"' + q + '"</strong>.'
+            );
+            return;
         }
-    </style>
-</head>
-<body>
-    <h1>Buscador</h1>
 
-    <form id="form-busqueda">
-        <label>
-            Término de búsqueda:
-            <input type="text" id="query" name="q" required>
-        </label>
-        <button type="submit">Buscar</button>
-    </form>
+        let html = `
+            <h2 class="h5 mb-3">
+                Resultados para <span class="fw-semibold">"${q}"</span>
+                <span class="text-muted">(${hits.length})</span>
+            </h2>
+        `;
 
-    <h2>Resultados</h2>
-    <div id="resultados"></div>
+        hits.forEach((hit, index) => {
+            const score = hit._score !== undefined ? hit._score.toFixed(3) : '';
+            const src = hit._source || {};
 
-    <script>
-        const form = document.getElementById('form-busqueda');
-        const resultadosDiv = document.getElementById('resultados');
+            const titulo = src.term_child || src.term_parent || 'Sin título';
+            const definicion = src.definition || src.definicion_1 || '';
+            const fuente = src.fuente_1 || src.fuente || '';
+            const urlDoc = src.source_url || src.url || '';
 
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            resultadosDiv.innerHTML = 'Buscando...';
+            html += `
+            <article class="card shadow-sm mb-3 border-0">
+                <div class="card-body">
+                    <h3 class="h6 mb-1">${titulo}</h3>
+                    ${score ? `<p class="text-muted small mb-2">Relevancia: ${score}</p>` : ''}
 
-            const q = document.getElementById('query').value.trim();
-            if (!q) {
-                resultadosDiv.innerHTML = 'Escribe un término de búsqueda.';
-                return;
-            }
+                    ${definicion ? `<p class="mb-2">${definicion}</p>` : ''}
 
-            try {
-                // 👇 ya no mandamos index, el backend usa lenguaje_controlado por defecto
-                const url = `/api/buscar?q=${encodeURIComponent(q)}&size=10`;
-                const resp = await fetch(url);
-                const data = await resp.json();
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        ${fuente ? `<span class="badge text-bg-light">Fuente: ${fuente}</span>` : ''}
+                        ${urlDoc ? `<a href="${urlDoc}" target="_blank" rel="noopener" class="small">Ver documento fuente</a>` : ''}
+                    </div>
 
-                // 👉 AQUÍ EMPIEZA LA PARTE NUEVA BONITA
+                    <button class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#raw-${index}">
+                        Ver JSON completo
+                    </button>
 
-                if (!resp.ok) {
-                    resultadosDiv.innerHTML = `<p>Error: ${data.error || 'Error en la búsqueda'}</p>`;
-                    return;
-                }
-
-                const hits = (data.hits && data.hits.hits) ? data.hits.hits : [];
-
-                if (hits.length === 0) {
-                    resultadosDiv.innerHTML = '<p>No se encontraron resultados.</p>';
-                    return;
-                }
-
-                let html = '<h3>Resultados</h3>';
-
-                hits.forEach((hit) => {
-                    const src = hit._source || {};
-                    const termino = src.termino || src.titulo || 'Sin título';
-                    const definicion = src.definicion || src.descripcion || '';
-
-                    html += `
-                        <div class="resultado">
-                            <strong>${termino}</strong><br>
-                            ${definicion ? `<p>${definicion}</p>` : ''}
-                            <small>_score: ${hit._score ?? ''}</small>
-                            <details>
-                                <summary>Ver JSON completo</summary>
-                                <pre>${JSON.stringify(src, null, 2)}</pre>
-                            </details>
-                        </div>
-                    `;
-                });
-
-                resultadosDiv.innerHTML = html;
-
-                // 👉 AQUÍ TERMINA LA PARTE NUEVA
-
-            } catch (err) {
-                console.error(err);
-                resultadosDiv.innerHTML = '<p>Error de conexión con el backend.</p>';
-            }
+                    <div class="collapse mt-2" id="raw-${index}">
+                        <pre class="small bg-light rounded p-2 mb-0">${JSON.stringify(hit, null, 2)}</pre>
+                    </div>
+                </div>
+            </article>
+            `;
         });
-    </script>
-</body>
-</html>
 
+        resultadosDiv.innerHTML = html;
+
+    } catch (err) {
+        console.error(err);
+        cargandoDiv.classList.add('d-none');
+        mostrarMensaje('danger', 'Error de conexión con el backend.');
+    }
+});
+</script>
+{% endblock %}
