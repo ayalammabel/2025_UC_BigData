@@ -31,3 +31,25 @@ def validar_usuario(
     except Exception as e:
         print(">>> ERROR EN validar_usuario():", repr(e))
         raise
+
+def _get_client(uri: str) -> MongoClient:
+    return MongoClient(uri, serverSelectionTimeoutMS=5000)
+
+def listar_usuarios(uri: str, db_name: str, collection_name: str):
+    """
+    Retorna una lista de usuarios con campos básicos para la tabla:
+    usuario, rol y fechaCreacion (si existe).
+    """
+    client = _get_client(uri)
+    db = client[db_name]
+    coleccion = db[collection_name]
+
+    usuarios = []
+    for doc in coleccion.find({}, {"_id": 0, "usuario": 1, "rol": 1, "fecha_creacion": 1}):
+        usuarios.append({
+            "usuario": doc.get("usuario"),
+            "rol": doc.get("rol", "Usuario"),
+            "fechaCreacion": doc.get("fecha_creacion", "")
+        })
+
+    return usuarios
