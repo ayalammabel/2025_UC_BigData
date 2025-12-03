@@ -89,7 +89,7 @@ def buscador():
 
 # ====== API del buscador (conexión real a Elastic) ======
 @app.route('/api/buscar', methods=['GET'])
-def api_buscar():
+_buscar():
     """
     Endpoint que consulta ElasticSearch.
     Ejemplo: /api/buscar?q=palabra&index=mi_indice
@@ -302,6 +302,49 @@ def api_usuarios():
         except Exception as e:
             print("ERROR creando usuario:", repr(e))
             return jsonify({"error": "Error al crear usuario"}), 500
+@app.route('/api/usuarios/<usuario>', methods=['PUT', 'DELETE'])
+@login_required
+def api_usuario_detalle(usuario):
+    """
+    API para actualizar o eliminar un usuario concreto.
+    """
+    permisos = session.get('permisos', {})
+    if not permisos.get('admin_usuarios', True):
+        return jsonify({"error": "No autorizado"}), 403
+
+    if request.method == 'PUT':
+        try:
+            data = request.get_json(force=True)
+            mongo.actualizar_usuario(
+                MONGO_URI,
+                MONGO_DB,
+                MONGO_COLECCION,
+                usuario_original=usuario,
+                data=data
+            )
+            return jsonify({"ok": True})
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as e:
+            print("ERROR actualizando usuario:", repr(e))
+            return jsonify({"error": "Error al actualizar usuario"}), 500
+
+    if request.method == 'DELETE':
+        try:
+            mongo.eliminar_usuario(
+                MONGO_URI,
+                MONGO_DB,
+                MONGO_COLECCION,
+                usuario=usuario
+            )
+            return jsonify({"ok": True})
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as e:
+            print("ERROR eliminando usuario:", repr(e))
+            return jsonify({"error": "Error al eliminar usuario"}), 500
+
+
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
 @app.route('/about')
