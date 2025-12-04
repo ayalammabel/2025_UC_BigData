@@ -1,17 +1,194 @@
 {% extends "base.html" %}
-{% block title %}Cargar archivos a Elastic – Panel admin{% endblock %}
+
+{% block title %}Cargar archivos – Proyecto BigData Lenguaje controlado{% endblock %}
 
 {% block content %}
 <main class="container py-4">
-    <h1 class="mb-3">Cargar archivos para indexación</h1>
-    <p class="text-muted">
-        Aquí podrás subir nuevos documentos (por ejemplo, PDFs normativos o
-        archivos CSV/JSON) que luego serán procesados e indexados en ElasticSearch.
+
+    <h1 class="display-5 fw-bold mb-3">Cargar archivos para indexación</h1>
+    <p class="text-muted mb-4">
+        Aquí podrás subir nuevos documentos (por ejemplo, PDFs normativos o archivos CSV/JSON)
+        que luego serán procesados e indexados en ElasticSearch.
     </p>
 
-    <!-- Más adelante agregamos:
-         - formulario de subida,
-         - selección de tipo de archivo,
-         - barra de progreso / mensajes. -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            <form id="formCarga"
+                  method="POST"
+                  action="{{ url_for('admin_carga_archivos') }}"
+                  enctype="multipart/form-data">
+
+                <!-- 1. Índice de destino -->
+                <h2 class="h5 mb-3">1. Seleccionar índice de destino</h2>
+                <div class="mb-3">
+                    <label for="indiceDestino" class="form-label">Índice de ElasticSearch</label>
+                    <select class="form-select" id="indiceDestino" name="indice_destino">
+                        <!-- Por ahora solo tu índice principal -->
+                        <option value="lenguaje_controlado">
+                            lenguaje_controlado (índice principal)
+                        </option>
+                    </select>
+                    <div class="form-text">
+                        Más adelante podemos cargar la lista de índices desde ElasticSearch.
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- 2. Método de carga -->
+                <h2 class="h5 mb-3">2. Seleccionar método de carga</h2>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="metodo"
+                               id="metodoZipJson"
+                               value="zip_json"
+                               checked>
+                        <label class="form-check-label" for="metodoZipJson">
+                            ZIP / JSON comprimidos (subir archivos desde el computador)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="metodo"
+                               id="metodoJsonSuelto"
+                               value="json_suelto">
+                        <label class="form-check-label" for="metodoJsonSuelto">
+                            JSON sueltos (archivos JSON individuales)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="radio"
+                               name="metodo"
+                               id="metodoWebScraping"
+                               value="web_scraping">
+                        <label class="form-check-label" for="metodoWebScraping">
+                            Web scraping (extraer PDFs desde una URL)
+                        </label>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- 3. Secciones variables según el método -->
+
+                <!-- ZIP / JSON comprimidos -->
+                <div id="seccionZipJson" class="metodo-section">
+                    <h2 class="h5 mb-3">3. Subir ZIP o JSON comprimidos</h2>
+                    <div class="mb-3">
+                        <label for="archivosZipJson" class="form-label">
+                            Selecciona uno o varios archivos (.zip, .json)
+                        </label>
+                        <input class="form-control"
+                               type="file"
+                               id="archivosZipJson"
+                               name="archivos_zipjson"
+                               multiple>
+                        <div class="form-text">
+                            Por ejemplo, un ZIP con muchos JSON o un conjunto de archivos JSON exportados.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON sueltos -->
+                <div id="seccionJsonSuelto" class="metodo-section d-none">
+                    <h2 class="h5 mb-3">3. Subir JSON sueltos</h2>
+                    <div class="mb-3">
+                        <label for="archivosJson" class="form-label">
+                            Selecciona uno o varios archivos JSON
+                        </label>
+                        <input class="form-control"
+                               type="file"
+                               id="archivosJson"
+                               name="archivos_json"
+                               multiple>
+                    </div>
+                </div>
+
+                <!-- Web scraping -->
+                <div id="seccionWebScraping" class="metodo-section d-none">
+                    <h2 class="h5 mb-3">3. Configurar web scraping</h2>
+
+                    <div class="mb-3">
+                        <label for="urlScraping" class="form-label">URL inicial para web scraping</label>
+                        <input type="url"
+                               class="form-control"
+                               id="urlScraping"
+                               name="url_scraping"
+                               placeholder="https://www.ejemplo.gov.co/normatividad">
+                        <div class="form-text">
+                            Desde esta URL se empezará a recorrer y extraer enlaces.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="extensiones" class="form-label">Extensiones a navegar</label>
+                        <input type="text"
+                               class="form-control"
+                               id="extensiones"
+                               name="extensiones"
+                               placeholder="aspx, php, html">
+                        <div class="form-text">
+                            Separa por comas. Ejemplo: <code>aspx, php, html</code>.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="tiposArchivos" class="form-label">Tipos de archivos a descargar</label>
+                        <input type="text"
+                               class="form-control"
+                               id="tiposArchivos"
+                               name="tipos_archivos"
+                               placeholder="pdf">
+                        <div class="form-text">
+                            Separa por comas. Ejemplo: <code>pdf, docx, txt</code>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mt-4">
+                    <button type="submit" class="btn btn-primary px-4">
+                        Iniciar carga
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
 </main>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+    // Alternar secciones según el método elegido
+    document.addEventListener('DOMContentLoaded', function () {
+        const radios = document.querySelectorAll('input[name="metodo"]');
+        const seccionZipJson = document.getElementById('seccionZipJson');
+        const seccionJsonSuelto = document.getElementById('seccionJsonSuelto');
+        const seccionWebScraping = document.getElementById('seccionWebScraping');
+
+        function actualizarSecciones() {
+            const valor = document.querySelector('input[name="metodo"]:checked').value;
+
+            seccionZipJson.classList.add('d-none');
+            seccionJsonSuelto.classList.add('d-none');
+            seccionWebScraping.classList.add('d-none');
+
+            if (valor === 'zip_json') {
+                seccionZipJson.classList.remove('d-none');
+            } else if (valor === 'json_suelto') {
+                seccionJsonSuelto.classList.remove('d-none');
+            } else if (valor === 'web_scraping') {
+                seccionWebScraping.classList.remove('d-none');
+            }
+        }
+
+        radios.forEach(r => r.addEventListener('change', actualizarSecciones));
+        actualizarSecciones();  // estado inicial
+    });
+</script>
+{% endblock %}
+
