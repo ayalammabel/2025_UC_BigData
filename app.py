@@ -107,25 +107,62 @@ def buscador():
 def buscar():
     """
     Endpoint que consulta ElasticSearch.
-    Ejemplo: /api/buscar?q=palabra&index=mi_indice
+    Ejemplo: /api/buscar?q=palabra&tipo=padre|hijo
     """
-    query = request.args.get('q', '').strip()
+    q = request.args.get('q', '').strip()
     index_name = request.args.get('index', 'lenguaje_controlado')
-    # size = int(request.args.get('size', 10))
+    tipo = request.args.get('tipo', '').strip()  # "", "padre" o "hijo"
 
-    if not query:
-        return jsonify({"error": "Parámetro 'q' es obligatorio"}), 400
+    if not q:
+        return jsonify({"error": "Debe ingresar un término de búsqueda."}), 400
+
+    # 1️⃣ Construimos la parte bool de la query
+    bool_query = {
+        "must": [
+            {
+                "multi_match": {
+                    "query": q,
+                    "fields": [
+                        "term_parent^2",
+                        "term_child^2",
+                        "related_terms",
+                        "definition",
+                        "pdf_text"
+                    ]
+                }
+            }
+        ],
+        "filter": []
+    }
+
+    # 2️⃣ Aplicar filtros según tipo de término
+    if tipo == "hijo":
+        # Solo términos hijo → documentos que tienen term_child
+        bool_query["filter"].append({"exists": {"field": "term_child"}})
+
+    elif tipo == "padre":
+        # Solo términos padre → documentos que NO tienen term_child
+        bool_query.setdefault("must_not", []).append(
+            {"exists": {"field": "term_child"}}
+        )
+
+    body = {
+        "query": {
+            "bool": bool_query
+        }
+    }
+
+    # Para comprobar qué se está mandando realmente
+    print("=== ARGS ===", dict(request.args))
+    print("=== QUERY ENVIADA A ES ===")
+    print(body)
 
     try:
-        resultados = elastic.buscar_texto(
-            index_name=index_name,
-            query=query,
-            # size=size
-        )
-        return jsonify(resultados)
+        resp = es.search(index=index_name, body=body)
+        return jsonify(resp)
     except Exception as e:
-        print("Error al buscar en Elastic:", e)
-        return jsonify({"error": "Error al conectar con ElasticSearch"}), 500
+        print("Error al consultar Elasticsearch:", e)
+        return jsonify({"error": "Error al consultar Elasticsearch."}), 500
         
 @app.route("/documentos_elastic", methods=["GET", "POST"])
 def documentos_elastic():
