@@ -331,20 +331,29 @@ def admin_elastic():
     )
 
 @app.route("/api/buscar")
+from flask import request, jsonify
+from elasticsearch import Elasticsearch
+
+es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
+INDEX_NAME = "lenguaje_controlado"                 # tu índice real
+
+FIELD_MODULO = "modulo"
+
+@app.route("/api/buscar")
 def api_buscar():
     q = request.args.get("q", "").strip()
     size = int(request.args.get("size", 10))
-    modulo = request.args.get("modulo", "").strip()  # NUEVO
+    modulo = request.args.get("modulo", "").strip()
 
     if not q:
         return jsonify({"error": "Debe ingresar un término de búsqueda."}), 400
 
-    # Parte de filtros
+    # 1. Construimos los filtros
     filters = []
     if modulo:
-        # usa "modulo" o "modulo.keyword" según tu mapping
-        filters.append({"term": {"modulo": modulo}})
+        filters.append({"term": {FIELD_MODULO: modulo}})
 
+    # 2. Construimos la consulta a Elasticsearch
     body = {
         "size": size,
         "query": {
@@ -354,10 +363,11 @@ def api_buscar():
                         "multi_match": {
                             "query": q,
                             "fields": [
-                                "termino_padre^2",
-                                "termino_hijo",
-                                "subtermino",
-                                "definicion_termino"
+                                "term_parent^2",
+                                "term_child^2",
+                                "subterm",
+                                "definition",
+                                "definicion_1"
                             ]
                         }
                     }
@@ -367,12 +377,18 @@ def api_buscar():
         }
     }
 
+    # (opcional) imprime en logs la query para mostrársela al profe
+    print("=== QUERY ENVIADA A ES ===")
+    print(body)
+
     try:
         resp = es.search(index=INDEX_NAME, body=body)
         return jsonify(resp)
     except Exception as e:
-        print("Error en búsqueda ES:", e)
+        print("Error al consultar Elasticsearch:", e)
         return jsonify({"error": "Error al consultar Elasticsearch."}), 500
+
+
 @app.route('/admin/carga-archivos', methods=['GET', 'POST'])
 @login_required
 def admin_carga_archivos():
