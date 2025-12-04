@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba Web Scraping</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 20px auto;
+        }
+        h1 {
+            color: #333;
+        }
+        form {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f9f9f9;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        .error {
+            color: #b20000;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .resumen {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            background: #f5f5f5;
+        }
+        ul {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            padding: 10px;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Prueba de Web Scraping</h1>
+
+<form method="POST" action="/documentos_elastic">
+    <label for="url">URL a analizar:</label>
+    <input
+        type="text"
+        id="url"
+        name="url"
+        placeholder="https://www.minsalud.gov.co/Normativa/paginas/normativa.aspx"
+        value="{{ url_ingresada or '' }}"
+    >
+    <button type="submit">Ejecutar scraping</button>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+</form>
+
+{% if total_links and total_links > 0 %}
+    <div class="resumen">
+        <p><strong>URL ingresada:</strong> {{ url_ingresada }}</p>
+        {% if url_efectiva %}
+            <p><strong>URL efectiva usada internamente:</strong> {{ url_efectiva }}</p>
+        {% endif %}
+        <p><strong>Total de links encontrados:</strong> {{ total_links }}</p>
+        <p><strong>PDFs descargados en static/uploads:</strong> {{ pdf_count }}</p>
+    </div>
+
+    <h2>Listado de links encontrados</h2>
+    <ul>
+        {% for link in links %}
+            <li><a href="{{ link }}" target="_blank">{{ link }}</a></li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
+</body>
+</html>
