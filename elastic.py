@@ -16,7 +16,7 @@ class ElasticSearch:
 
     def __init__(self, base_url: str | None = None, api_key: str | None = None):
         # Si no se pasan por parámetro, los toma de variables de entorno
-        self.base_url = base_url or os.getenv("ELASTIC_BASE_URL", "")
+        self.base_url = base_url or os.getenv("ELASTIC_URL", "")
         self.api_key = api_key or os.getenv("ELASTIC_API_KEY", "")
 
         if not self.base_url or not self.api_key:
