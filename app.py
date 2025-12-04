@@ -264,7 +264,7 @@ def admin_carga_archivos():
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
 
         # Carpeta donde guardaremos temporalmente los archivos
-        upload_dir = os.path.join('static', 'uploads', 'carga_archivos')
+        upload_dir = os.path.join('static', 'uploads', 'admin_carga_archivos')
         os.makedirs(upload_dir, exist_ok=True)
 
         if metodo == 'zip_json':
@@ -313,7 +313,7 @@ def admin_carga_archivos():
 
     # GET: solo renderizamos la página
     return render_template(
-        'carga_archivos.html',
+        'admin_carga_archivos.html',
         version=VERSION_APP,
         creador=CREATOR_APP
     )
