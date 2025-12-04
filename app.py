@@ -368,37 +368,23 @@ def gestor_elastic():
 
 @app.route('/api/elastic/indices')
 def api_elastic_indices():
-    # 1. Verificar sesión y permisos
-    permisos = session.get('permisos', {})
-    print("DEBUG /api/elastic/indices permisos:", permisos)
-
-    # OJO: la clave debe ser EXACTAMENTE 'admin_elastic'
-    if not permisos.get('admin_elastic', False):
-        return jsonify({'error': 'No autorizado (PERMISOS_APP)'}), 403
-
-    # 2. Consultar Elasticsearch
     try:
-        info = elastic.client.cat.indices(
-            format='json',
-            bytes='b',
-            h='index,docs.count,store.size,health,status'
-        )
+        if not session.get("logged_in"):
+            return jsonify({"error": "No autorizado"}), 401
 
-        indices = []
-        for item in info:
-            indices.append({
-                'nombre': item.get('index'),
-                'docs': int(item.get('docs.count', 0)),
-                'tamano': item.get('store.size', ''),
-                'salud': item.get('health', ''),
-                'status': item.get('status', '')
-            })
+        permisos = session.get("permisos", {})
+        if not permisos.get("admin_elastic"):
+            return jsonify({"error": "No tiene permisos para gestionar ElasticSearch"}), 403
 
-        return jsonify({'indices': indices})
+        indices = elastic.listar_indices()
+        return jsonify({"indices": indices})
 
     except Exception as e:
-        print("ERROR /api/elastic/indices Elastic:", e)
-        return jsonify({'error': 'Error al consultar Elasticsearch (ELASTIC)'}), 500
+        # Log completo en consola
+        print("Error al listar índices de Elastic:", repr(e))
+        # y mandamos el detalle al front TEMPORALMENTE
+        return jsonify({"error": f"Error en listar_indices: {str(e)}"}), 500
+
 
 @app.route('/api/elastic/ejecutar', methods=['POST'])
 @login_required
