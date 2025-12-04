@@ -26,21 +26,13 @@
                    required>
         </div>
 
-        <!-- NUEVO: filtro por módulo -->
+        <!-- NUEVO: filtro por tipo de término -->
         <div class="col-md-3">
-            <label for="modulo" class="form-label">Módulo</label>
-            <select id="modulo" name="modulo" class="form-select">
+            <label for="tipo_termino" class="form-label">Tipo de término</label>
+            <select id="tipo_termino" name="tipo_termino" class="form-select">
                 <option value="">Todos</option>
-                <option value="Promoción del Acceso a la Justicia para las Mujeres">
-                    Promoción del Acceso a la Justicia
-                </option>
-                <option value="Prevención de violencias contra las mujeres">
-                    Prevención de violencias
-                </option>
-                <option value="Gestión del conocimiento">
-                    Gestión del conocimiento
-                </option>
-                <!-- Agrega aquí los otros módulos que tengas en el lenguaje controlado -->
+                <option value="padre">Solo términos padre</option>
+                <option value="hijo">Solo términos hijo</option>
             </select>
         </div>
 
@@ -94,7 +86,6 @@ form.addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const q = document.getElementById('query').value.trim();
-    const modulo = document.getElementById('modulo').value;  // NUEVO
     if (!q) {
         mostrarMensaje('warning', 'Por favor escribe un término de búsqueda.');
         return;
