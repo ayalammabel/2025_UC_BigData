@@ -111,7 +111,7 @@ def buscar():
     """
     query = request.args.get('q', '').strip()
     index_name = request.args.get('index', 'lenguaje_controlado')
-    size = int(request.args.get('size', 10))
+    # size = int(request.args.get('size', 10))
 
     if not query:
         return jsonify({"error": "Parámetro 'q' es obligatorio"}), 400
@@ -120,7 +120,7 @@ def buscar():
         resultados = elastic.buscar_texto(
             index_name=index_name,
             query=query,
-            size=size
+            # size=size
         )
         return jsonify(resultados)
     except Exception as e:
@@ -341,7 +341,7 @@ def admin_elastic():
 @app.route("/api/buscar")
 def api_buscar():
     q = request.args.get("q", "").strip()
-    size = int(request.args.get("size", 10))
+    # size = int(request.args.get("size", 10))
     modulo = request.args.get("modulo", "").strip()
 
     if not q:
@@ -354,7 +354,7 @@ def api_buscar():
 
     # 2. Construimos la consulta a Elasticsearch
     body = {
-        "size": size,
+    #   "size": size,
         "query": {
             "bool": {
                 "must": [
