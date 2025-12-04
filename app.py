@@ -272,7 +272,7 @@ def admin_carga_archivos():
         metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
         # --- Caso web_scraping: POR AHORA NO IMPLEMENTADO ---
-            if request.method == 'POST':
+        if request.method == 'POST':
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
         metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
