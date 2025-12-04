@@ -270,14 +270,17 @@ def admin_carga_archivos():
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
         metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
-        # --- Caso web_scraping: por ahora solo mensaje ---
+        # --- Caso web_scraping: POR AHORA NO IMPLEMENTADO ---
         if metodo == 'web_scraping':
             url_scraping = request.form.get('url_scraping', '').strip()
             if not url_scraping:
                 flash('Debes ingresar una URL para el web scraping.', 'warning')
             else:
-                flash('El método de web scraping aún no está implementado. '
-                      'Por ahora solo soportamos ZIP/JSON y JSON sueltos.', 'info')
+                flash(
+                    'El método de web scraping aún no está implementado en esta versión. '
+                    'Solo soportamos ZIP/JSON comprimidos y JSON sueltos.',
+                    'info'
+                )
             return redirect(url_for('admin_carga_archivos'))
 
         # --- Resto de métodos: debemos tener archivos ---
@@ -289,6 +292,15 @@ def admin_carga_archivos():
         if not ficheros or ficheros[0].filename == '':
             flash('Debes seleccionar al menos un archivo.', 'warning')
             return redirect(url_for('admin_carga_archivos'))
+
+        # 👉 LÍMITE DE ARCHIVOS PARA NO SATURAR
+        MAX_FICHEROS = 2
+        if len(ficheros) > MAX_FICHEROS:
+            ficheros = ficheros[:MAX_FICHEROS]
+            flash(
+                f'Solo se procesarán los primeros {MAX_FICHEROS} archivos para evitar sobrecargar el servidor.',
+                'info'
+            )
 
         docs = []
         tmp_dir = tempfile.mkdtemp(prefix='carga_', dir='/tmp')
@@ -305,7 +317,8 @@ def admin_carga_archivos():
                         with ZipFile(ruta_archivo, 'r') as z:
                             for member in z.namelist():
                                 if not member.lower().endswith('.json'):
-                                    # ignoramos PDFs u otros dentro del ZIP por ahora
+                                    # Por ahora ignoramos PDFs u otros dentro del ZIP
+                                    print(f"[INFO] Archivo dentro del ZIP ignorado (no es JSON): {member}")
                                     continue
                                 with z.open(member) as jf:
                                     try:
@@ -335,14 +348,18 @@ def admin_carga_archivos():
                         print(f"[WARN] Error leyendo JSON {nombre_seguro}: {e}")
 
                 else:
-                    # Otros tipos (pdf, csv, etc.) se ignoran y avisamos por consola
+                    # Otros tipos (pdf, csv, etc.) se ignoran
                     print(f"[INFO] Archivo ignorado (no es ZIP ni JSON): {nombre_seguro}")
 
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
         if not docs:
-            flash('No se encontraron documentos JSON para indexar en los archivos enviados.', 'warning')
+            flash(
+                'No se encontraron documentos JSON para indexar en los archivos enviados '
+                '(si subiste solo PDFs, todavía no los estamos procesando aquí).',
+                'warning'
+            )
             return redirect(url_for('admin_carga_archivos'))
 
         # ==== Enviar a Elastic ====
@@ -350,9 +367,13 @@ def admin_carga_archivos():
             resultado = elastic.indexar_bulks(indice_destino, docs)
             # La API _bulk puede devolver "errors": true
             if isinstance(resultado, dict) and resultado.get('errors'):
-                flash('La indexación en Elastic terminó con algunos errores. Revisa los logs.', 'warning')
+                flash(
+                    f'La indexación en Elastic terminó con algunos errores. '
+                    f'Se intentaron enviar {len(docs)} documentos.',
+                    'warning'
+                )
             else:
-                flash(f'Se enviaron {len(docs)} documentos a ElasticSearch.', 'success')
+                flash(f'Se enviaron {len(docs)} documentos a ElasticSearch correctamente.', 'success')
         except Exception as e:
             print("[ERROR] Error indexando documentos en ElasticSearch:", e)
             flash(f'Error indexando documentos en ElasticSearch: {e}', 'danger')
@@ -365,6 +386,7 @@ def admin_carga_archivos():
         version=VERSION_APP,
         creador=CREATOR_APP
     )
+
 @app.route('/api/usuarios', methods=['GET', 'POST'])
 @login_required
 def api_usuarios():
