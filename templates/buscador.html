@@ -94,6 +94,7 @@ form.addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const q = document.getElementById('query').value.trim();
+    const modulo = document.getElementById('modulo').value;  // NUEVO
     if (!q) {
         mostrarMensaje('warning', 'Por favor escribe un término de búsqueda.');
         return;
