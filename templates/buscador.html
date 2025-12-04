@@ -14,24 +14,44 @@
             </p>
 
             <!-- Formulario de búsqueda -->
-            <form id="form-busqueda" class="mb-4">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-8">
-                        <label for="query" class="form-label">Término de búsqueda</label>
-                        <input type="text"
-                               class="form-control"
-                               id="query"
-                               name="q"
-                               placeholder="Ej.: violencia, cuidado, salud mental…"
-                               required>
-                    </div>
-                    <div class="col-md-4 d-grid">
-                        <button type="submit" class="btn btn-primary mt-md-0 mt-3">
-                            Buscar términos
-                        </button>
-                    </div>
-                </div>
-            </form>
+           <form id="form-busqueda" class="mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-md-6">
+            <label for="query" class="form-label">Término de búsqueda</label>
+            <input type="text"
+                   class="form-control"
+                   id="query"
+                   name="q"
+                   placeholder="Ej.: violencia, cuidado, salud mental…"
+                   required>
+        </div>
+
+        <!-- NUEVO: filtro por módulo -->
+        <div class="col-md-3">
+            <label for="modulo" class="form-label">Módulo</label>
+            <select id="modulo" name="modulo" class="form-select">
+                <option value="">Todos</option>
+                <option value="Promoción del Acceso a la Justicia para las Mujeres">
+                    Promoción del Acceso a la Justicia
+                </option>
+                <option value="Prevención de violencias contra las mujeres">
+                    Prevención de violencias
+                </option>
+                <option value="Gestión del conocimiento">
+                    Gestión del conocimiento
+                </option>
+                <!-- Agrega aquí los otros módulos que tengas en el lenguaje controlado -->
+            </select>
+        </div>
+
+        <div class="col-md-3 d-grid">
+            <button type="submit" class="btn btn-primary mt-md-0 mt-3">
+                Buscar términos
+            </button>
+        </div>
+    </div>
+</form>
+
 
             <!-- Mensajes -->
             <div id="alerta" class="alert alert-info d-none">
