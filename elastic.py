@@ -167,6 +167,27 @@ class ElasticSearch:
         )
         return resp
 
+    def ejecutar_dml(self, comando):
+        op = comando.get("operacion")
+        index = comando.get("index")
+
+        if op == "index":
+            doc_id = comando.get("id")
+            body = comando.get("documento", {})
+            resp = self.client.index(index=index, id=doc_id, body=body)
+        elif op == "delete":
+            doc_id = comando.get("id")
+            resp = self.client.delete(index=index, id=doc_id)
+        elif op == "update":
+            doc_id = comando.get("id")
+            body = {"doc": comando.get("documento", {})}
+            resp = self.client.update(index=index, id=doc_id, body=body)
+        else:
+            raise ValueError("Operación DML no soportada")
+
+        return resp
+
+
 
 
 
