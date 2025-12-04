@@ -55,7 +55,7 @@
     </div>
 </main>
 
-<!-- Modal Crear Usuario -->
+<!-- Modal Crear / Editar Usuario -->
 <div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-labelledby="modalCrearUsuarioLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -107,7 +107,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary btn-sm">Crear usuario</button>
+          <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
         </div>
       </form>
     </div>
@@ -118,8 +118,8 @@
 {% block extra_js %}
 <script>
 let usuariosAdminCache = [];
-let modoUsuario = 'crear';       // 'crear' o 'editar'
-let usuarioOriginal = null;      // para saber a quién estamos editando
+let modoUsuario = 'crear'; // 'crear' o 'editar'
+let usuarioOriginal = null;
 
 document.addEventListener('DOMContentLoaded', function () {
     cargarUsuariosAdmin();
@@ -195,7 +195,7 @@ function cargarUsuariosAdmin() {
         });
 }
 
-/* ===== Modal: preparar para CREAR ===== */
+/* === Modal CREAR === */
 function prepararModalCrear() {
     modoUsuario = 'crear';
     usuarioOriginal = null;
@@ -215,7 +215,7 @@ function prepararModalCrear() {
     errorDiv.textContent = '';
 }
 
-/* ===== Modal: preparar para EDITAR ===== */
+/* === Modal EDITAR === */
 function abrirEditarUsuario(usuario) {
     const user = usuariosAdminCache.find(u => u.usuario === usuario);
     if (!user) {
@@ -245,7 +245,7 @@ function abrirEditarUsuario(usuario) {
     modal.show();
 }
 
-/* ===== Guardar (crear o editar) desde el modal ===== */
+/* === Guardar (crear o editar) === */
 function guardarUsuarioDesdeModal() {
     const usuario = document.getElementById('nuevoUsuario').value.trim();
     const password = document.getElementById('nuevoPassword').value.trim();
@@ -310,7 +310,7 @@ function guardarUsuarioDesdeModal() {
     });
 }
 
-/* ===== Eliminar usuario ===== */
+/* === Eliminar usuario === */
 function eliminarUsuario(usuario) {
     if (!confirm(`¿Seguro deseas eliminar el usuario "${usuario}"?`)) {
         return;
@@ -333,4 +333,5 @@ function eliminarUsuario(usuario) {
 }
 </script>
 {% endblock %}
+
 
