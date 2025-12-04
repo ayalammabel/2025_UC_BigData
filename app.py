@@ -366,6 +366,46 @@ def gestor_elastic():
     )
 
 
+@app.route('/api/elastic/indices', methods=['GET'])
+@login_required
+def api_elastic_indices():
+    permisos = session.get('permisos', {})
+    if not permisos.get('admin_elastic'):
+        return jsonify({"error": "No autorizado"}), 403
+
+    try:
+        datos = elastic.listar_indices()
+        return jsonify({"indices": datos})
+    except Exception as e:
+        print("Error al listar índices:", e)
+        return jsonify({"error": "Error al consultar índices"}), 500
+
+@app.route('/api/elastic/ejecutar', methods=['POST'])
+@login_required
+def api_elastic_ejecutar():
+    permisos = session.get('permisos', {})
+    if not permisos.get('admin_elastic'):
+        return jsonify({"error": "No autorizado"}), 403
+
+    data = request.get_json(force=True, silent=True) or {}
+    modo = data.get("modo")  # "query" o "dml"
+
+    try:
+        if modo == "query":
+            index_name = data.get("index", "lenguaje_controlado")
+            body = data.get("body", {})
+            resp = elastic.ejecutar_query(index_name, body)
+        elif modo == "dml":
+            comando = data.get("comando", {})
+            resp = elastic.ejecutar_dml(comando)
+        else:
+            return jsonify({"error": "Modo inválido"}), 400
+
+        return jsonify({"resultado": resp})
+    except Exception as e:
+        print("Error al ejecutar comando Elastic:", e)
+        return jsonify({"error": "Error al ejecutar en ElasticSearch"}), 500
+
 
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
