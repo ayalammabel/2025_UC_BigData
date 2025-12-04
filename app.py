@@ -405,7 +405,7 @@ def api_elastic_indices():
 def api_elastic_ejecutar():
     permisos = session.get('permisos', {})
     if not permisos.get('admin_elastic'):
-        return jsonify({"error": "No autorizado"}), 403
+        return jsonify({"error": "No autorizado (PERMISOS_APP"}), 403
 
     data = request.get_json(force=True, silent=True) or {}
     modo = data.get("modo")  # "query" o "dml"
