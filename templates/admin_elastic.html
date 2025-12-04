@@ -1,15 +1,313 @@
 {% extends "base.html" %}
-{% block title %}Gestión de Elastic – Panel admin{% endblock %}
+
+{% block title %}Gestión de ElasticSearch – Proyecto BigData{% endblock %}
 
 {% block content %}
-<main class="container py-4">
+<main class="container py-5">
     <h1 class="mb-3">Gestión de ElasticSearch</h1>
-    <p class="text-muted">
-        Desde esta sección podrás consultar el estado del índice de lenguaje controlado,
-        probar consultas y ver estadísticas básicas.
+    <p class="text-muted mb-4">
+        Desde esta sección puedes consultar el estado de los índices de ElasticSearch
+        y ejecutar consultas o comandos avanzados sobre el índice de lenguaje controlado.
     </p>
 
-    <!-- Aquí luego mostraremos info del índice, stats, etc. -->
+    <!-- CARD: ÍNDICES -->
+    <section class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Índices de ElasticSearch</h2>
+
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre del índice</th>
+                            <th class="text-end">Total de documentos</th>
+                            <th class="text-end">Tamaño</th>
+                            <th class="text-center">Salud</th>
+                            <th class="text-center">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-indices">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-3">
+                                Cargando índices…
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- CARD: CONSOLA QUERY / DML -->
+    <section class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Ejecutar consulta o comando</h2>
+
+            <!-- Tipo de operación -->
+            <div class="mb-3">
+                <label class="form-label d-block">Tipo de operación</label>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="modoOperacion"
+                           id="modoQuery" value="query" checked>
+                    <label class="form-check-label" for="modoQuery">QUERY (búsqueda)</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="modoOperacion"
+                           id="modoDml" value="dml">
+                    <label class="form-check-label" for="modoDml">DML (indexar / actualizar / borrar)</label>
+                </div>
+            </div>
+
+            <!-- Selección de índice (opcional, para Query) -->
+            <div class="mb-3">
+                <label for="selectIndice" class="form-label">
+                    Índice (para QUERY)
+                </label>
+                <select id="selectIndice" class="form-select">
+                    <option value="lenguaje_controlado" selected>lenguaje_controlado</option>
+                </select>
+                <div class="form-text">
+                    Si no estás segura, deja <code>lenguaje_controlado</code>.
+                </div>
+            </div>
+
+            <!-- Textarea JSON -->
+            <div class="mb-3">
+                <label for="textareaJson" class="form-label">
+                    Query / Comando (JSON)
+                </label>
+                <textarea id="textareaJson" class="form-control" rows="10"
+                          spellcheck="false"></textarea>
+                <div class="form-text" id="ayuda-json">
+                    Ejemplo QUERY:
+                    <pre class="mb-0">
+{
+  "query": {
+    "match": {
+      "pdf_text": "violencia"
+    }
+  },
+  "size": 5
+}
+                    </pre>
+                </div>
+            </div>
+
+            <!-- Botones -->
+            <div class="d-flex gap-2">
+                <button id="btnEjecutar" class="btn btn-primary">
+                    Ejecutar
+                </button>
+                <button id="btnLimpiar" class="btn btn-outline-secondary">
+                    Limpiar
+                </button>
+            </div>
+
+            <!-- Resultado -->
+            <div class="mt-4">
+                <h3 class="h6">Resultado</h3>
+                <pre id="resultadoJson" class="bg-light p-3 rounded small text-wrap"
+                     style="max-height: 400px; overflow:auto;">
+Sin resultados todavía.
+                </pre>
+            </div>
+        </div>
+    </section>
+
+    <a href="{{ url_for('admin') }}" class="btn btn-link">
+        ← Volver al panel de administración
+    </a>
 </main>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tablaIndices = document.getElementById('tabla-indices');
+    const selectIndice = document.getElementById('selectIndice');
+    const textareaJson = document.getElementById('textareaJson');
+    const ayudaJson = document.getElementById('ayuda-json');
+    const resultadoJson = document.getElementById('resultadoJson');
+    const btnEjecutar = document.getElementById('btnEjecutar');
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    const modoQuery = document.getElementById('modoQuery');
+    const modoDml = document.getElementById('modoDml');
+
+    // -------- 1. CARGAR ÍNDICES --------
+    async function cargarIndices() {
+        try {
+            const resp = await fetch('/api/elastic/indices');
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                tablaIndices.innerHTML = `
+                    <tr><td colspan="5" class="text-center text-danger py-3">
+                        Error al obtener los índices: ${data.error || 'Error desconocido'}
+                    </td></tr>`;
+                return;
+            }
+
+            const indices = data.indices || [];
+            if (!indices.length) {
+                tablaIndices.innerHTML = `
+                    <tr><td colspan="5" class="text-center text-muted py-3">
+                        No se encontraron índices en ElasticSearch.
+                    </td></tr>`;
+                return;
+            }
+
+            // Tabla
+            tablaIndices.innerHTML = '';
+            selectIndice.innerHTML = '';
+            indices.forEach(idx => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${idx.nombre}</td>
+                    <td class="text-end">${idx.docs}</td>
+                    <td class="text-end">${idx.tamano}</td>
+                    <td class="text-center">${idx.salud}</td>
+                    <td class="text-center">${idx.status}</td>
+                `;
+                tablaIndices.appendChild(tr);
+
+                const opt = document.createElement('option');
+                opt.value = idx.nombre;
+                opt.textContent = idx.nombre;
+                selectIndice.appendChild(opt);
+            });
+        } catch (err) {
+            console.error(err);
+            tablaIndices.innerHTML = `
+                <tr><td colspan="5" class="text-center text-danger py-3">
+                    Error de conexión al cargar índices.
+                </td></tr>`;
+        }
+    }
+
+    cargarIndices();
+
+    // -------- 2. CAMBIO DE MODO (QUERY / DML) --------
+    function setEjemploQuery() {
+        textareaJson.value = `{
+  "query": {
+    "match": {
+      "pdf_text": "violencia"
+    }
+  },
+  "size": 5
+}`;
+        ayudaJson.innerHTML = `Ejemplo QUERY:
+<pre class="mb-0">
+{
+  "query": {
+    "match": {
+      "pdf_text": "violencia"
+    }
+  },
+  "size": 5
+}
+</pre>`;
+    }
+
+    function setEjemploDml() {
+        textareaJson.value = `{
+  "operacion": "index",
+  "index": "lenguaje_controlado",
+  "id": "ejemplo_1",
+  "documento": {
+    "term_parent": "Ejemplo",
+    "term_child": "Término de prueba",
+    "definition": "Documento de prueba insertado desde la consola de Elastic."
+  }
+}`;
+        ayudaJson.innerHTML = `Ejemplo DML:
+<pre class="mb-0">
+{
+  "operacion": "index",
+  "index": "lenguaje_controlado",
+  "id": "ejemplo_1",
+  "documento": {
+    "campo": "valor"
+  }
+}
+</pre>`;
+    }
+
+    modoQuery.addEventListener('change', () => {
+        if (modoQuery.checked) setEjemploQuery();
+    });
+    modoDml.addEventListener('change', () => {
+        if (modoDml.checked) setEjemploDml();
+    });
+
+    // Por defecto, ejemplo de QUERY
+    setEjemploQuery();
+
+    // -------- 3. EJECUTAR --------
+    btnEjecutar.addEventListener('click', async () => {
+        let modo = modoQuery.checked ? 'query' : 'dml';
+        let bodyText = textareaJson.value.trim();
+
+        if (!bodyText) {
+            alert('Por favor escribe un JSON para ejecutar.');
+            return;
+        }
+
+        let payload;
+        try {
+            const parsed = JSON.parse(bodyText);
+
+            if (modo === 'query') {
+                payload = {
+                    modo: 'query',
+                    index: selectIndice.value,
+                    body: parsed
+                };
+            } else {
+                payload = {
+                    modo: 'dml',
+                    comando: parsed
+                };
+            }
+        } catch (e) {
+            alert('El contenido no es un JSON válido.');
+            return;
+        }
+
+        resultadoJson.textContent = 'Ejecutando…';
+
+        try {
+            const resp = await fetch('/api/elastic/ejecutar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                resultadoJson.textContent = 'Error: ' + (data.error || 'Error desconocido');
+                return;
+            }
+
+            resultadoJson.textContent = JSON.stringify(data.resultado, null, 2);
+        } catch (err) {
+            console.error(err);
+            resultadoJson.textContent = 'Error de conexión al ejecutar la operación.';
+        }
+    });
+
+    // -------- 4. LIMPIAR --------
+    btnLimpiar.addEventListener('click', () => {
+        if (modoQuery.checked) {
+            setEjemploQuery();
+        } else {
+            setEjemploDml();
+        }
+        resultadoJson.textContent = 'Sin resultados todavía.';
+    });
+});
+</script>
+{% endblock %}
