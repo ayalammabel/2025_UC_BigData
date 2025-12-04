@@ -371,14 +371,14 @@ def gestor_elastic():
 def api_elastic_indices():
     permisos = session.get('permisos', {})
     if not permisos.get('admin_elastic'):
-        return jsonify({"error": "No autorizado"}), 403
+        return jsonify({"error": "No autorizado PERMISOS APP"}), 403
 
     try:
         datos = elastic.listar_indices()
         return jsonify({"indices": datos})
     except Exception as e:
         print("Error al listar índices:", e)
-        return jsonify({"error": "Error al consultar índices"}), 500
+        return jsonify({"error": f"ELASTIC: {e}"}), 500
 
 @app.route('/api/elastic/ejecutar', methods=['POST'])
 @login_required
