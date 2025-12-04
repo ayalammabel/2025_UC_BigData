@@ -6,6 +6,7 @@ from flask import (
 from dotenv import load_dotenv
 from functools import wraps
 import os
+from webscraping_helper import descargar_pdfs_desde_url
 
 # Importar solo lo que SÍ vamos a usar por ahora
 from elastic import ElasticSearch
@@ -271,18 +272,57 @@ def admin_carga_archivos():
         metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
         # --- Caso web_scraping: POR AHORA NO IMPLEMENTADO ---
+            if request.method == 'POST':
+        indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
+        metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
+
+        # --- Caso web_scraping ---
         if metodo == 'web_scraping':
             url_scraping = request.form.get('url_scraping', '').strip()
+            extensiones = request.form.get('extensiones', '').strip()
+            tipos_archivos = request.form.get('tipos_archivos', 'pdf').strip()
+
             if not url_scraping:
                 flash('Debes ingresar una URL para el web scraping.', 'warning')
-            else:
-                flash(
-                    'El método de web scraping aún no está implementado en esta versión. '
-                    'Solo soportamos ZIP/JSON comprimidos y JSON sueltos.',
-                    'info'
-                )
-            return redirect(url_for('admin_carga_archivos'))
+                return redirect(url_for('admin_carga_archivos'))
 
+            # Por ahora usamos solo tipos_archivos para filtrar (pdf, docx, etc.)
+            # extensiones (aspx, php, html) las podríamos usar después para recorrer más profundo.
+            try:
+                docs = descargar_pdfs_desde_url(
+                    url_inicial=url_scraping,
+                    tipos_archivos=tipos_archivos,
+                    max_pdfs=5,              # límite para no matar a Render
+                    max_paginas_por_pdf=5,   # límite de páginas por PDF
+                )
+            except Exception as e:
+                print("[WEB] Error general en web scraping:", e)
+                flash(f'Error al hacer web scraping: {e}', 'danger')
+                return redirect(url_for('admin_carga_archivos'))
+
+            if not docs:
+                flash('No se encontraron PDFs con texto para indexar desde la URL indicada.', 'warning')
+                return redirect(url_for('admin_carga_archivos'))
+
+            # Enviamos a Elastic
+            try:
+                resultado = elastic.indexar_bulks(indice_destino, docs)
+                if isinstance(resultado, dict) and resultado.get('errors'):
+                    flash(
+                        f'Web scraping: se generaron {len(docs)} documentos pero Elastic reporta algunos errores.',
+                        'warning'
+                    )
+                else:
+                    flash(
+                        f'Web scraping: se descargaron e indexaron {len(docs)} documentos en ElasticSearch.',
+                        'success'
+                    )
+            except Exception as e:
+                print("[WEB] Error indexando documentos desde web scraping:", e)
+                flash(f'Error indexando documentos desde web scraping: {e}', 'danger')
+
+            return redirect(url_for('admin_carga_archivos'))
+        
         # --- Resto de métodos: debemos tener archivos ---
         if metodo == 'zip_json':
             ficheros = request.files.getlist('archivos_zipjson')
