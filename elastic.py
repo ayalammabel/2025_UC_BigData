@@ -138,8 +138,9 @@ class ElasticSearch:
         except Exception:
             return {"status_code": resp.status_code, "text": resp.text}
 
+    # ===================== MÉTODOS ADMIN ELASTIC ======================
 
-     def listar_indices(self) -> List[Dict]:
+    def listar_indices(self) -> List[Dict]:
         """
         Devuelve información del índice principal de lenguaje controlado.
         NO usa _cat/indices para evitar problemas de permisos de clúster.
@@ -147,71 +148,101 @@ class ElasticSearch:
         try:
             index_name = getattr(self, "index_por_defecto", "lenguaje_controlado")
 
-            # 1) Contar documentos con una búsqueda size=0 (solo necesita permiso de lectura)
-            resp_count = self.client.search(
-                index=index_name,
-                size=0,
-                query={"match_all": {}}
-            )
-            docs_total = resp_count.get("hits", {}).get("total", {}).get("value", 0)
+            # 1) Contar documentos con una búsqueda size=0
+            url = self._url(f"/{index_name}/_search")
+            body = {
+                "size": 0,
+                "query": {"match_all": {}}
+            }
+            resp = requests.get(url, headers=self.headers, data=json.dumps(body))
 
-            # 2) Intentar obtener el estado “open/close”.
-            #    Si falla, lo dejamos como "desconocido", pero NO rompemos.
-            status = "desconocido"
             try:
-                resp_get = self.client.indices.get(index=index_name)
-                # resp_get es un dict con una clave por índice
-                info_idx = resp_get.get(index_name, {})
-                settings = info_idx.get("settings", {}).get("index", {})
-                status = settings.get("status", "open")  # muchos índices ni siquiera exponen esto
+                data = resp.json()
             except Exception:
-                pass
+                logger.error("Error parseando JSON en listar_indices: %s", resp.text)
+                raise
 
-            # Armamos un solo “índice” en la lista, porque solo nos interesa este
+            docs_total = (
+                data.get("hits", {})
+                    .get("total", {})
+                    .get("value", 0)
+            )
+
+            # No pedimos info de cluster para no chocar con permisos:
+            status = "open"
+
             return [{
                 "nombre": index_name,
                 "docs": docs_total,
-                "tamano": "N/A",     # podríamos calcularlo luego si quieres
-                "salud": "N/A",      # idem, evitar llamadas de clúster
+                "tamano": "N/A",
+                "salud": "N/A",
                 "status": status
             }]
 
         except Exception as e:
-            print("Error en listar_indices():", e)
-            # Importante: volvemos a lanzar la excepción para que la ruta la capture
+            logger.error("Error en listar_indices(): %s", e)
             raise
 
-
-    def ejecutar_query(self, index_name, query_body):
+    def ejecutar_query(self, index_name: str, query_body: Dict) -> Dict:
         """
         Ejecuta un _search con el body que envíe el usuario.
         """
-        resp = self.client.search(
-            index=index_name,
-            body=query_body
-        )
-        return resp
+        try:
+            url = self._url(f"/{index_name}/_search")
+            resp = requests.get(url, headers=self.headers, data=json.dumps(query_body))
 
-    def ejecutar_dml(self, comando):
-        op = comando.get("operacion")
-        index = comando.get("index")
+            try:
+                return resp.json()
+            except Exception:
+                return {"status_code": resp.status_code, "text": resp.text}
+        except Exception as e:
+            logger.error("Error en ejecutar_query(): %s", e)
+            raise
 
-        if op == "index":
+    def ejecutar_dml(self, comando: Dict) -> Dict:
+        """
+        Ejecuta operaciones sencillas de DML:
+        - operacion: index | update | delete
+        - index: nombre del índice
+        - id: id del documento
+        - documento: dict con el contenido (para index/update)
+        """
+        try:
+            operacion = comando.get("operacion")
+            index_name = comando.get("index")
             doc_id = comando.get("id")
-            body = comando.get("documento", {})
-            resp = self.client.index(index=index, id=doc_id, body=body)
-        elif op == "delete":
-            doc_id = comando.get("id")
-            resp = self.client.delete(index=index, id=doc_id)
-        elif op == "update":
-            doc_id = comando.get("id")
-            body = {"doc": comando.get("documento", {})}
-            resp = self.client.update(index=index, id=doc_id, body=body)
-        else:
-            raise ValueError("Operación DML no soportada")
+            documento = comando.get("documento", {})
 
-        return resp
+            if not index_name:
+                raise ValueError("Falta 'index' en el comando DML")
 
+            if operacion == "index":
+                # PUT /{index}/_doc/{id}
+                url = self._url(f"/{index_name}/_doc/{doc_id}")
+                resp = requests.put(url, headers=self.headers, data=json.dumps(documento))
+
+            elif operacion == "update":
+                # POST /{index}/_update/{id}
+                url = self._url(f"/{index_name}/_update/{doc_id}")
+                body = {"doc": documento}
+                resp = requests.post(url, headers=self.headers, data=json.dumps(body))
+
+            elif operacion == "delete":
+                # DELETE /{index}/_doc/{id}
+                url = self._url(f"/{index_name}/_doc/{doc_id}")
+                resp = requests.delete(url, headers=self.headers)
+
+            else:
+                raise ValueError(f"Operación DML no soportada: {operacion}")
+
+            try:
+                return resp.json()
+            except Exception:
+                return {"status_code": resp.status_code, "text": resp.text}
+
+        except Exception as e:
+            logger.error("Error en ejecutar_dml(): %s", e)
+            raise
 
 
 
