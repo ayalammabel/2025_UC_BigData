@@ -139,22 +139,47 @@ class ElasticSearch:
             return {"status_code": resp.status_code, "text": resp.text}
 
 
-    def listar_indices(self):
+     def listar_indices(self) -> List[Dict]:
         """
-        Devuelve info básica de los índices en formato lista de dicts.
+        Devuelve información del índice principal de lenguaje controlado.
+        NO usa _cat/indices para evitar problemas de permisos de clúster.
         """
-        resp = self.client.cat.indices(format='json')
-        # resp es una lista de dicts con muchos campos, elegimos algunos:
-        indices = []
-        for idx in resp:
-            indices.append({
-                "nombre": idx.get('index'),
-                "docs": idx.get('docs.count'),
-                "tamano": idx.get('store.size'),
-                "salud": idx.get('health'),
-                "status": idx.get('status'),
-            })
-        return indices
+        try:
+            index_name = getattr(self, "index_por_defecto", "lenguaje_controlado")
+
+            # 1) Contar documentos con una búsqueda size=0 (solo necesita permiso de lectura)
+            resp_count = self.client.search(
+                index=index_name,
+                size=0,
+                query={"match_all": {}}
+            )
+            docs_total = resp_count.get("hits", {}).get("total", {}).get("value", 0)
+
+            # 2) Intentar obtener el estado “open/close”.
+            #    Si falla, lo dejamos como "desconocido", pero NO rompemos.
+            status = "desconocido"
+            try:
+                resp_get = self.client.indices.get(index=index_name)
+                # resp_get es un dict con una clave por índice
+                info_idx = resp_get.get(index_name, {})
+                settings = info_idx.get("settings", {}).get("index", {})
+                status = settings.get("status", "open")  # muchos índices ni siquiera exponen esto
+            except Exception:
+                pass
+
+            # Armamos un solo “índice” en la lista, porque solo nos interesa este
+            return [{
+                "nombre": index_name,
+                "docs": docs_total,
+                "tamano": "N/A",     # podríamos calcularlo luego si quieres
+                "salud": "N/A",      # idem, evitar llamadas de clúster
+                "status": status
+            }]
+
+        except Exception as e:
+            print("Error en listar_indices():", e)
+            # Importante: volvemos a lanzar la excepción para que la ruta la capture
+            raise
 
 
     def ejecutar_query(self, index_name, query_body):
