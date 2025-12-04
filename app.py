@@ -331,9 +331,6 @@ def admin_elastic():
         permisos=permisos
     )
 
-@app.route("/api/buscar")
-
-
 es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
 INDEX_NAME = "lenguaje_controlado"                 # tu índice real
 
