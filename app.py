@@ -331,7 +331,7 @@ def admin_elastic():
     )
 
 @app.route("/api/buscar")
-from flask import request, jsonify
+from Flask import request, jsonify
 from elasticsearch import Elasticsearch
 
 es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
