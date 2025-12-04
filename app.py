@@ -246,20 +246,76 @@ def admin_elastic():
     )
 
 
-@app.route('/admin/carga-archivos')
+@app.route('/admin/carga-archivos', methods=['GET', 'POST'])
 @login_required
 def admin_carga_archivos():
     """
-    Sección para cargar archivos y enviarlos a Elastic.
-    Más adelante incluimos formularios para subir PDFs / CSV / JSON.
+    Página para cargar archivos que luego se indexarán en ElasticSearch.
+    Por ahora solo guarda los archivos en disco y muestra mensajes.
     """
+    # Permiso especial (opcional: si no quieres restricción, comenta este bloque)
     permisos = session.get('permisos', {})
+    if not permisos.get('admin_data_elastic', True):
+        flash('No tienes permisos para cargar archivos en ElasticSearch.', 'danger')
+        return redirect(url_for('admin'))
+
+    if request.method == 'POST':
+        metodo = request.form.get('metodo')
+        indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
+
+        # Carpeta donde guardaremos temporalmente los archivos
+        upload_dir = os.path.join('static', 'uploads', 'carga_archivos')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        if metodo == 'zip_json':
+            # Archivos ZIP / JSON subidos
+            files = request.files.getlist('archivos_zipjson')
+            guardados = []
+
+            for f in files:
+                if f and f.filename:
+                    filename = secure_filename(f.filename)
+                    path = os.path.join(upload_dir, filename)
+                    f.save(path)
+                    guardados.append(path)
+
+            flash(f'Se cargaron {len(guardados)} archivo(s) para el índice "{indice_destino}". '
+                  'Falta implementar la indexación en Elastic.', 'success')
+
+        elif metodo == 'json_suelto':
+            files = request.files.getlist('archivos_json')
+            guardados = []
+
+            for f in files:
+                if f and f.filename:
+                    filename = secure_filename(f.filename)
+                    path = os.path.join(upload_dir, filename)
+                    f.save(path)
+                    guardados.append(path)
+
+            flash(f'Se cargaron {len(guardados)} JSON sueltos para el índice "{indice_destino}". '
+                  'Falta implementar la indexación.', 'success')
+
+        elif metodo == 'web_scraping':
+            url_scraping = request.form.get('url_scraping', '').strip()
+            extensiones = request.form.get('extensiones', '').strip()
+            tipos_archivos = request.form.get('tipos_archivos', '').strip()
+
+            # Aquí en el futuro llamarías a una función de web scraping
+            # utils.ejecutar_scraping(url_scraping, extensiones, tipos_archivos, indice_destino)
+            flash('La configuración de web scraping se recibió correctamente. '
+                  'Falta implementar el proceso de scraping e indexación.', 'info')
+
+        else:
+            flash('Método de carga no reconocido.', 'danger')
+
+        return redirect(url_for('admin_carga_archivos'))
+
+    # GET: solo renderizamos la página
     return render_template(
-        'admin_carga_archivos.html',
+        'carga_archivos.html',
         version=VERSION_APP,
-        creador=CREATOR_APP,
-        usuario=session.get('usuario'),
-        permisos=permisos
+        creador=CREATOR_APP
     )
 
 @app.route('/api/usuarios', methods=['GET', 'POST'])
