@@ -9,3 +9,6 @@ bcrypt
 pandas
 numpy
 elasticsearch==8.11.0
+beautifulsoup4
+lxml
+PyPDF2
