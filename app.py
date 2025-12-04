@@ -3,7 +3,7 @@ from flask import (
     Flask, render_template, request,
     redirect, url_for, session, flash, jsonify
 )
-from elasticsearch import Elasticsearch
+f# rom elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 from functools import wraps
 import os
@@ -20,10 +20,10 @@ import json
 from zipfile import ZipFile
 from werkzeug.utils import secure_filename
 
-es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
+# es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
 INDEX_NAME = "lenguaje_controlado"                 # tu índice real
 
-FIELD_MODULO = "modulo"
+# FIELD_MODULO = ""
 
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
@@ -153,11 +153,9 @@ def buscar():
     print(body)
 
     try:
-        # Usa el mismo índice que ya tenías funcionando
-        resp = es.search(index="lenguaje_controlado", body=body)
+        resp = elastic.ejecutar_query("lenguaje_controlado", body)
         return jsonify(resp)
     except Exception as e:
-        # Para que veas en los logs qué está pasando
         print("ERROR AL CONSULTAR ES:", repr(e))
         return jsonify({"error": "Error al consultar Elasticsearch."}), 500
         
@@ -371,55 +369,6 @@ def admin_elastic():
         permisos=permisos
     )
 
-
-@app.route("/api/buscar")
-def api_buscar():
-    q = request.args.get("q", "").strip()
-    # size = int(request.args.get("size", 10))
-    modulo = request.args.get("modulo", "").strip()
-
-    if not q:
-        return jsonify({"error": "Debe ingresar un término de búsqueda."}), 400
-
-    # 1. Construimos los filtros
-    filters = []
-    if modulo:
-        filters.append({"term": {FIELD_MODULO: modulo}})
-
-    # 2. Construimos la consulta a Elasticsearch
-    body = {
-    #   "size": size,
-        "query": {
-            "bool": {
-                "must": [
-                    {
-                        "multi_match": {
-                            "query": q,
-                            "fields": [
-                                "term_parent^2",
-                                "term_child^2",
-                                "subterm",
-                                "definition",
-                                "definicion_1"
-                            ]
-                        }
-                    }
-                ],
-                "filter": filters
-            }
-        }
-    }
-
-    # (opcional) imprime en logs la query para mostrársela al profe
-    print("=== QUERY ENVIADA A ES ===")
-    print(body)
-
-    try:
-        resp = es.search(index=INDEX_NAME, body=body)
-        return jsonify(resp)
-    except Exception as e:
-        print("Error al consultar Elasticsearch:", e)
-        return jsonify({"error": "Error al consultar Elasticsearch."}), 500
 
 
 @app.route('/admin/carga-archivos', methods=['GET', 'POST'])
