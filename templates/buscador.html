@@ -86,6 +86,8 @@ form.addEventListener('submit', async function (e) {
     e.preventDefault();
 
     const q = document.getElementById('query').value.trim();
+    const tipo = document.getElementById('tipo_termino').value;  // 👈 NUEVO
+
     if (!q) {
         mostrarMensaje('warning', 'Por favor escribe un término de búsqueda.');
         return;
@@ -96,7 +98,12 @@ form.addEventListener('submit', async function (e) {
     cargandoDiv.classList.remove('d-none');
 
     try {
-        const url = `/api/buscar?q=${encodeURIComponent(q)}`;
+        const params = new URLSearchParams({
+            q: q,
+            tipo: tipo   // 👈 mandamos el tipo al backend
+        });
+
+        const url = `/api/buscar?${params.toString()}`;
         const resp = await fetch(url);
         const data = await resp.json();
 
