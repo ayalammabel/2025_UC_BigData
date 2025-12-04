@@ -330,7 +330,49 @@ def admin_elastic():
         permisos=permisos
     )
 
+@app.route("/api/buscar")
+def api_buscar():
+    q = request.args.get("q", "").strip()
+    size = int(request.args.get("size", 10))
+    modulo = request.args.get("modulo", "").strip()  # NUEVO
 
+    if not q:
+        return jsonify({"error": "Debe ingresar un término de búsqueda."}), 400
+
+    # Parte de filtros
+    filters = []
+    if modulo:
+        # usa "modulo" o "modulo.keyword" según tu mapping
+        filters.append({"term": {"modulo": modulo}})
+
+    body = {
+        "size": size,
+        "query": {
+            "bool": {
+                "must": [
+                    {
+                        "multi_match": {
+                            "query": q,
+                            "fields": [
+                                "termino_padre^2",
+                                "termino_hijo",
+                                "subtermino",
+                                "definicion_termino"
+                            ]
+                        }
+                    }
+                ],
+                "filter": filters
+            }
+        }
+    }
+
+    try:
+        resp = es.search(index=INDEX_NAME, body=body)
+        return jsonify(resp)
+    except Exception as e:
+        print("Error en búsqueda ES:", e)
+        return jsonify({"error": "Error al consultar Elasticsearch."}), 500
 @app.route('/admin/carga-archivos', methods=['GET', 'POST'])
 @login_required
 def admin_carga_archivos():
