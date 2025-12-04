@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from functools import wraps
 import os
 from webscraping_helper import descargar_pdfs_desde_url
-
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 # Importar solo lo que SÍ vamos a usar por ahora
 from elastic import ElasticSearch
 from functions import funciones
@@ -23,7 +24,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'clave_super_secreta_12345')
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
 # ================== CONFIGURACIÓN MONGO ==================
 # ================== CONFIGURACIÓN MONGO ==================
 MONGO_URI = "mongodb+srv://mayala:mayala123@mayala.y4cqo9f.mongodb.net/?retryWrites=true&w=majority&appName=mayala"
