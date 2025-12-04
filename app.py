@@ -254,74 +254,106 @@ def admin_elastic():
 @login_required
 def admin_carga_archivos():
     """
-    Página para cargar archivos que luego se indexarán en ElasticSearch.
-    Por ahora solo guarda los archivos en disco y muestra mensajes.
+    Pantalla para subir archivos y enviarlos a ElasticSearch.
+    Por ahora:
+      - Acepta ZIP o JSON sueltos.
+      - Busca JSON dentro de los ZIP.
+      - Envía todos los documentos JSON a elastic.indexar_bulks().
     """
-    # Permiso especial (opcional: si no quieres restricción, comenta este bloque)
+    # Solo quien tenga admin_data_elastic puede entrar
     permisos = session.get('permisos', {})
-    if not permisos.get('admin_data_elastic', True):
-        flash('No tienes permisos para cargar archivos en ElasticSearch.', 'danger')
+    if not permisos.get('admin_data_elastic'):
+        flash('No tienes permisos para cargar archivos a ElasticSearch.', 'danger')
         return redirect(url_for('admin'))
 
     if request.method == 'POST':
-        metodo = request.form.get('metodo')
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
+        metodo = request.form.get('metodo_carga', 'zip')  # zip / json / web
 
-        # Carpeta donde guardaremos temporalmente los archivos
-        upload_dir = os.path.join('static', 'uploads', 'admin_carga_archivos')
-        os.makedirs(upload_dir, exist_ok=True)
+        # Solo implementamos zip/json por ahora
+        if metodo not in ('zip', 'json'):
+            flash('El método de carga seleccionado aún no está implementado.', 'warning')
+            return redirect(url_for('admin_carga_archivos'))
 
-        if metodo == 'zip_json':
-            # Archivos ZIP / JSON subidos
-            files = request.files.getlist('archivos_zipjson')
-            guardados = []
+        ficheros = request.files.getlist('archivos_zip_json')
+        if not ficheros or ficheros[0].filename == '':
+            flash('Debes seleccionar al menos un archivo ZIP o JSON.', 'warning')
+            return redirect(url_for('admin_carga_archivos'))
 
-            for f in files:
-                if f and f.filename:
-                    filename = secure_filename(f.filename)
-                    path = os.path.join(upload_dir, filename)
-                    f.save(path)
-                    guardados.append(path)
+        docs = []
+        tmp_dir = tempfile.mkdtemp(prefix='carga_', dir='/tmp')
 
-            flash(f'Se cargaron {len(guardados)} archivo(s) para el índice "{indice_destino}". '
-                  'Falta implementar la indexación en Elastic.', 'success')
+        try:
+            for fichero in ficheros:
+                nombre_seguro = secure_filename(fichero.filename)
+                ruta_archivo = os.path.join(tmp_dir, nombre_seguro)
+                fichero.save(ruta_archivo)
 
-        elif metodo == 'json_suelto':
-            files = request.files.getlist('archivos_json')
-            guardados = []
+                # Si es ZIP, lo abrimos y sacamos todos los JSON
+                if nombre_seguro.lower().endswith('.zip'):
+                    try:
+                        with ZipFile(ruta_archivo, 'r') as z:
+                            for member in z.namelist():
+                                if not member.lower().endswith('.json'):
+                                    continue
+                                with z.open(member) as jf:
+                                    try:
+                                        contenido = json.load(jf)
+                                    except Exception as e:
+                                        logger.warning("No se pudo leer JSON %s del ZIP %s: %s", member, nombre_seguro, e)
+                                        continue
 
-            for f in files:
-                if f and f.filename:
-                    filename = secure_filename(f.filename)
-                    path = os.path.join(upload_dir, filename)
-                    f.save(path)
-                    guardados.append(path)
+                                    if isinstance(contenido, dict):
+                                        docs.append(contenido)
+                                    elif isinstance(contenido, list):
+                                        docs.extend(contenido)
+                    except Exception as e:
+                        logger.warning("Error leyendo ZIP %s: %s", nombre_seguro, e)
 
-            flash(f'Se cargaron {len(guardados)} JSON sueltos para el índice "{indice_destino}". '
-                  'Falta implementar la indexación.', 'success')
+                # Si es JSON directo
+                elif nombre_seguro.lower().endswith('.json'):
+                    try:
+                        with open(ruta_archivo, 'r', encoding='utf-8') as jf:
+                            contenido = json.load(jf)
+                        if isinstance(contenido, dict):
+                            docs.append(contenido)
+                        elif isinstance(contenido, list):
+                            docs.extend(contenido)
+                    except Exception as e:
+                        logger.warning("Error leyendo JSON %s: %s", nombre_seguro, e)
 
-        elif metodo == 'web_scraping':
-            url_scraping = request.form.get('url_scraping', '').strip()
-            extensiones = request.form.get('extensiones', '').strip()
-            tipos_archivos = request.form.get('tipos_archivos', '').strip()
+                # Otros tipos por ahora los ignoramos (PDF, CSV, etc.)
+                else:
+                    logger.info("Archivo ignorado (no es ZIP ni JSON): %s", nombre_seguro)
 
-            # Aquí en el futuro llamarías a una función de web scraping
-            # utils.ejecutar_scraping(url_scraping, extensiones, tipos_archivos, indice_destino)
-            flash('La configuración de web scraping se recibió correctamente. '
-                  'Falta implementar el proceso de scraping e indexación.', 'info')
+        finally:
+            # Limpia la carpeta temporal
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
-        else:
-            flash('Método de carga no reconocido.', 'danger')
+        if not docs:
+            flash('No se encontraron documentos JSON para indexar.', 'warning')
+            return redirect(url_for('admin_carga_archivos'))
+
+        # Enviar a Elastic
+        try:
+            resultado = elastic.indexar_bulks(indice_destino, docs)
+            # La API _bulk de Elastic devuelve "errors": true/false
+            if isinstance(resultado, dict) and resultado.get('errors'):
+                flash('La indexación terminó con algunos errores. Revisa los logs.', 'warning')
+            else:
+                flash(f'Se enviaron {len(docs)} documentos a ElasticSearch.', 'success')
+        except Exception as e:
+            logger.exception("Error indexando documentos en Elastic")
+            flash(f'Error indexando documentos en ElasticSearch: {e}', 'danger')
 
         return redirect(url_for('admin_carga_archivos'))
 
-    # GET: solo renderizamos la página
+    # GET -> solo mostrar la página
     return render_template(
         'admin_carga_archivos.html',
         version=VERSION_APP,
         creador=CREATOR_APP
     )
-
 @app.route('/api/usuarios', methods=['GET', 'POST'])
 @login_required
 def api_usuarios():
