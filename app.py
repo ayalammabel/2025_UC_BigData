@@ -119,6 +119,95 @@ def buscar():
     except Exception as e:
         print("Error al buscar en Elastic:", e)
         return jsonify({"error": "Error al conectar con ElasticSearch"}), 500
+@app.route("/documentos_elastic", methods=["GET", "POST"])
+def documentos_elastic():
+    # valores por defecto para la vista
+    context = {
+        "url_ingresada": "",
+        "url_efectiva": "",
+        "total_links": 0,
+        "pdf_count": 0,
+        "links": [],
+        "error": None,
+    }
+
+    if request.method == "POST":
+        url = request.form.get("url", "").strip()
+        context["url_ingresada"] = url
+
+        if not url:
+            context["error"] = "Debes ingresar una URL."
+            return render_template("documentos_elastic.html", **context)
+
+        # Si no puso http/https, asumimos https
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "https://" + url
+
+        # URL "especial" para MinSalud Normativa
+        MIN_SALUD_NORMATIVA = "https://www.minsalud.gov.co/Normativa/paginas/normativa.aspx"
+
+        # Si es dominio minsalud y menciona Normativa, forzamos a esa página
+        if "minsalu" in url.lower() and "normativa" in url.lower():
+            url_efectiva = MIN_SALUD_NORMATIVA
+        else:
+            url_efectiva = url
+
+        context["url_efectiva"] = url_efectiva
+
+        # 1. Limpiar y crear carpeta static/uploads
+        try:
+            if os.path.exists(UPLOAD_FOLDER):
+                shutil.rmtree(UPLOAD_FOLDER)  # borra carpeta con todo
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        except Exception as e:
+            context["error"] = f"Error gestionando la carpeta de descargas: {e}"
+            return render_template("documentos_elastic.html", **context)
+
+        # 2. Hacer la petición a la página
+        try:
+            resp = requests.get(url_efectiva, timeout=30)
+            resp.raise_for_status()
+        except Exception as e:
+            context["error"] = f"No se pudo acceder a la URL: {e}"
+            return render_template("documentos_elastic.html", **context)
+
+        # 3. Parsear HTML y extraer links
+        soup = BeautifulSoup(resp.text, "html.parser")
+        raw_links = []
+
+        for a in soup.find_all("a"):
+            href = a.get("href")
+            if not href:
+                continue
+            if href.startswith("#"):
+                continue
+            full_url = urljoin(url_efectiva, href)
+            raw_links.append(full_url)
+
+        links = sorted(set(raw_links))
+        context["links"] = links
+        context["total_links"] = len(links)
+
+        # 4. Descargar solo PDFs
+        pdf_count = 0
+        for link in links:
+            if link.lower().endswith(".pdf"):
+                try:
+                    pdf_resp = requests.get(link, timeout=60)
+                    pdf_resp.raise_for_status()
+                    filename = link.split("/")[-1] or "archivo.pdf"
+                    file_path = os.path.join(UPLOAD_FOLDER, filename)
+                    with open(file_path, "wb") as f:
+                        f.write(pdf_resp.content)
+                    pdf_count += 1
+                except Exception as e:
+                    # no romper por un solo PDF fallido
+                    print(f"Error descargando {link}: {e}")
+
+        context["pdf_count"] = pdf_count
+
+    # GET o POST (con o sin error) renderizan la misma plantilla
+    return render_template("documentos_elastic.html", **context)
 
 
 # ====== LOGIN CON MONGO ======
