@@ -13,6 +13,7 @@ from functions import funciones
 import mongo
 import tempfile
 import shutil
+import json
 from zipfile import ZipFile
 from werkzeug.utils import secure_filename
 
@@ -255,12 +256,10 @@ def admin_elastic():
 def admin_carga_archivos():
     """
     Pantalla para subir archivos y enviarlos a ElasticSearch.
-    Por ahora:
-      - Acepta ZIP o JSON sueltos.
-      - Busca JSON dentro de los ZIP.
-      - Envía todos los documentos JSON a elastic.indexar_bulks().
+    Implementa:
+      - ZIP / JSON comprimidos (zip_json)
+      - JSON sueltos (json_suelto)
     """
-    # Solo quien tenga admin_data_elastic puede entrar
     permisos = session.get('permisos', {})
     if not permisos.get('admin_data_elastic'):
         flash('No tienes permisos para cargar archivos a ElasticSearch.', 'danger')
@@ -268,16 +267,21 @@ def admin_carga_archivos():
 
     if request.method == 'POST':
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
-        metodo = request.form.get('metodo_carga', 'zip')  # zip / json / web
+        metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
-        # Solo implementamos zip/json por ahora
-        if metodo not in ('zip', 'json'):
+        # Por ahora solo implementamos zip_json y json_suelto
+        if metodo not in ('zip_json', 'json_suelto'):
             flash('El método de carga seleccionado aún no está implementado.', 'warning')
             return redirect(url_for('admin_carga_archivos'))
 
-        ficheros = request.files.getlist('archivos_zip_json')
+        # Según el método, leemos de un input u otro
+        if metodo == 'zip_json':
+            ficheros = request.files.getlist('archivos_zipjson')
+        else:  # json_suelto
+            ficheros = request.files.getlist('archivos_json')
+
         if not ficheros or ficheros[0].filename == '':
-            flash('Debes seleccionar al menos un archivo ZIP o JSON.', 'warning')
+            flash('Debes seleccionar al menos un archivo.', 'warning')
             return redirect(url_for('admin_carga_archivos'))
 
         docs = []
@@ -289,7 +293,7 @@ def admin_carga_archivos():
                 ruta_archivo = os.path.join(tmp_dir, nombre_seguro)
                 fichero.save(ruta_archivo)
 
-                # Si es ZIP, lo abrimos y sacamos todos los JSON
+                # ====== ZIP con muchos JSON ======
                 if nombre_seguro.lower().endswith('.zip'):
                     try:
                         with ZipFile(ruta_archivo, 'r') as z:
@@ -300,7 +304,10 @@ def admin_carga_archivos():
                                     try:
                                         contenido = json.load(jf)
                                     except Exception as e:
-                                        logger.warning("No se pudo leer JSON %s del ZIP %s: %s", member, nombre_seguro, e)
+                                        logger.warning(
+                                            "No se pudo leer JSON %s del ZIP %s: %s",
+                                            member, nombre_seguro, e
+                                        )
                                         continue
 
                                     if isinstance(contenido, dict):
@@ -310,7 +317,7 @@ def admin_carga_archivos():
                     except Exception as e:
                         logger.warning("Error leyendo ZIP %s: %s", nombre_seguro, e)
 
-                # Si es JSON directo
+                # ====== JSON suelto ======
                 elif nombre_seguro.lower().endswith('.json'):
                     try:
                         with open(ruta_archivo, 'r', encoding='utf-8') as jf:
@@ -322,22 +329,20 @@ def admin_carga_archivos():
                     except Exception as e:
                         logger.warning("Error leyendo JSON %s: %s", nombre_seguro, e)
 
-                # Otros tipos por ahora los ignoramos (PDF, CSV, etc.)
                 else:
+                    # Otros tipos (pdf, csv, etc.) por ahora los ignoramos
                     logger.info("Archivo ignorado (no es ZIP ni JSON): %s", nombre_seguro)
 
         finally:
-            # Limpia la carpeta temporal
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
         if not docs:
             flash('No se encontraron documentos JSON para indexar.', 'warning')
             return redirect(url_for('admin_carga_archivos'))
 
-        # Enviar a Elastic
+        # ==== Enviar a Elastic ====
         try:
             resultado = elastic.indexar_bulks(indice_destino, docs)
-            # La API _bulk de Elastic devuelve "errors": true/false
             if isinstance(resultado, dict) and resultado.get('errors'):
                 flash('La indexación terminó con algunos errores. Revisa los logs.', 'warning')
             else:
@@ -348,7 +353,7 @@ def admin_carga_archivos():
 
         return redirect(url_for('admin_carga_archivos'))
 
-    # GET -> solo mostrar la página
+    # GET → solo renderizar la página
     return render_template(
         'admin_carga_archivos.html',
         version=VERSION_APP,
