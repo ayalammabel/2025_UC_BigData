@@ -89,7 +89,7 @@ def buscador():
 
 # ====== API del buscador (conexión real a Elastic) ======
 @app.route('/api/buscar', methods=['GET'])
-_buscar():
+def buscar():
     """
     Endpoint que consulta ElasticSearch.
     Ejemplo: /api/buscar?q=palabra&index=mi_indice
