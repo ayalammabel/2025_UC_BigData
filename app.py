@@ -344,6 +344,28 @@ def api_usuario_detalle(usuario):
             print("ERROR eliminando usuario:", repr(e))
             return jsonify({"error": "Error al eliminar usuario"}), 500
 
+@app.route('/gestor_elastic')
+@login_required
+def gestor_elastic():
+    """
+    Página de gestión de ElasticSearch (requiere permiso admin_elastic).
+    """
+    permisos = session.get('permisos', {})
+
+    if not permisos.get('admin_elastic'):
+        flash('No tienes permisos para gestionar ElasticSearch.', 'danger')
+        return redirect(url_for('admin'))
+
+    # Opcional: podríamos precargar índices aquí, pero yo lo haría por AJAX
+    return render_template(
+        'gestor_elastic.html',
+        version=VERSION_APP,
+        creador=CREATOR_APP,
+        usuario=session.get('usuario'),
+        permisos=permisos
+    )
+
+
 
 # =============== RUTAS EXTRA OPCIONALES (NAVBAR) ===============
 
