@@ -20,6 +20,12 @@ import json
 from zipfile import ZipFile
 from werkzeug.utils import secure_filename
 
+es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
+INDEX_NAME = "lenguaje_controlado"                 # tu índice real
+
+FIELD_MODULO = "modulo"
+
+
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
 
@@ -331,10 +337,6 @@ def admin_elastic():
         permisos=permisos
     )
 
-es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
-INDEX_NAME = "lenguaje_controlado"                 # tu índice real
-
-FIELD_MODULO = "modulo"
 
 @app.route("/api/buscar")
 def api_buscar():
