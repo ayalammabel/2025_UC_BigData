@@ -3,6 +3,7 @@ from flask import (
     Flask, render_template, request,
     redirect, url_for, session, flash, jsonify
 )
+from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 from functools import wraps
 import os
@@ -331,8 +332,7 @@ def admin_elastic():
     )
 
 @app.route("/api/buscar")
-from Flask import request, jsonify
-from elasticsearch import Elasticsearch
+
 
 es = Elasticsearch("https://TU-ENDPOINT-ELASTIC")  # tu URL
 INDEX_NAME = "lenguaje_controlado"                 # tu índice real
