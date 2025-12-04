@@ -259,6 +259,7 @@ def admin_carga_archivos():
     Implementa:
       - ZIP / JSON comprimidos (zip_json)
       - JSON sueltos (json_suelto)
+      - web_scraping: por ahora solo muestra mensaje de "no implementado".
     """
     permisos = session.get('permisos', {})
     if not permisos.get('admin_data_elastic'):
@@ -269,12 +270,17 @@ def admin_carga_archivos():
         indice_destino = request.form.get('indice_destino', 'lenguaje_controlado')
         metodo = request.form.get('metodo', 'zip_json')  # zip_json / json_suelto / web_scraping
 
-        # Por ahora solo implementamos zip_json y json_suelto
-        if metodo not in ('zip_json', 'json_suelto'):
-            flash('El método de carga seleccionado aún no está implementado.', 'warning')
+        # --- Caso web_scraping: por ahora solo mensaje ---
+        if metodo == 'web_scraping':
+            url_scraping = request.form.get('url_scraping', '').strip()
+            if not url_scraping:
+                flash('Debes ingresar una URL para el web scraping.', 'warning')
+            else:
+                flash('El método de web scraping aún no está implementado. '
+                      'Por ahora solo soportamos ZIP/JSON y JSON sueltos.', 'info')
             return redirect(url_for('admin_carga_archivos'))
 
-        # Según el método, leemos de un input u otro
+        # --- Resto de métodos: debemos tener archivos ---
         if metodo == 'zip_json':
             ficheros = request.files.getlist('archivos_zipjson')
         else:  # json_suelto
@@ -299,23 +305,22 @@ def admin_carga_archivos():
                         with ZipFile(ruta_archivo, 'r') as z:
                             for member in z.namelist():
                                 if not member.lower().endswith('.json'):
+                                    # ignoramos PDFs u otros dentro del ZIP por ahora
                                     continue
                                 with z.open(member) as jf:
                                     try:
                                         contenido = json.load(jf)
                                     except Exception as e:
-                                        logger.warning(
-                                            "No se pudo leer JSON %s del ZIP %s: %s",
-                                            member, nombre_seguro, e
-                                        )
+                                        print(f"[WARN] No se pudo leer JSON {member} de {nombre_seguro}: {e}")
                                         continue
 
                                     if isinstance(contenido, dict):
                                         docs.append(contenido)
                                     elif isinstance(contenido, list):
                                         docs.extend(contenido)
+
                     except Exception as e:
-                        logger.warning("Error leyendo ZIP %s: %s", nombre_seguro, e)
+                        print(f"[WARN] Error leyendo ZIP {nombre_seguro}: {e}")
 
                 # ====== JSON suelto ======
                 elif nombre_seguro.lower().endswith('.json'):
@@ -327,28 +332,29 @@ def admin_carga_archivos():
                         elif isinstance(contenido, list):
                             docs.extend(contenido)
                     except Exception as e:
-                        logger.warning("Error leyendo JSON %s: %s", nombre_seguro, e)
+                        print(f"[WARN] Error leyendo JSON {nombre_seguro}: {e}")
 
                 else:
-                    # Otros tipos (pdf, csv, etc.) por ahora los ignoramos
-                    logger.info("Archivo ignorado (no es ZIP ni JSON): %s", nombre_seguro)
+                    # Otros tipos (pdf, csv, etc.) se ignoran y avisamos por consola
+                    print(f"[INFO] Archivo ignorado (no es ZIP ni JSON): {nombre_seguro}")
 
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
         if not docs:
-            flash('No se encontraron documentos JSON para indexar.', 'warning')
+            flash('No se encontraron documentos JSON para indexar en los archivos enviados.', 'warning')
             return redirect(url_for('admin_carga_archivos'))
 
         # ==== Enviar a Elastic ====
         try:
             resultado = elastic.indexar_bulks(indice_destino, docs)
+            # La API _bulk puede devolver "errors": true
             if isinstance(resultado, dict) and resultado.get('errors'):
-                flash('La indexación terminó con algunos errores. Revisa los logs.', 'warning')
+                flash('La indexación en Elastic terminó con algunos errores. Revisa los logs.', 'warning')
             else:
                 flash(f'Se enviaron {len(docs)} documentos a ElasticSearch.', 'success')
         except Exception as e:
-            logger.exception("Error indexando documentos en Elastic")
+            print("[ERROR] Error indexando documentos en ElasticSearch:", e)
             flash(f'Error indexando documentos en ElasticSearch: {e}', 'danger')
 
         return redirect(url_for('admin_carga_archivos'))
