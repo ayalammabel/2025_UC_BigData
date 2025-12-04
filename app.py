@@ -3,7 +3,7 @@ from flask import (
     Flask, render_template, request,
     redirect, url_for, session, flash, jsonify
 )
-f# rom elasticsearch import Elasticsearch
+#from elasticsearch import Elasticsearch
 from dotenv import load_dotenv
 from functools import wraps
 import os
