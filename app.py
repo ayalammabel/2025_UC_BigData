@@ -11,6 +11,10 @@ import os
 from elastic import ElasticSearch
 from functions import funciones
 import mongo
+import tempfile
+import shutil
+from zipfile import ZipFile
+from werkzeug.utils import secure_filename
 
 # ================== CARGAR VARIABLES DE ENTORNO ==================
 load_dotenv()
