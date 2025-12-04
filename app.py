@@ -358,7 +358,7 @@ def gestor_elastic():
 
     # Opcional: podríamos precargar índices aquí, pero yo lo haría por AJAX
     return render_template(
-        'gestor_elastic.html',
+        'admin_elastic.html',
         version=VERSION_APP,
         creador=CREATOR_APP,
         usuario=session.get('usuario'),
