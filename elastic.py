@@ -139,3 +139,34 @@ class ElasticSearch:
             return {"status_code": resp.status_code, "text": resp.text}
 
 
+    def listar_indices(self):
+        """
+        Devuelve info básica de los índices en formato lista de dicts.
+        """
+        resp = self.client.cat.indices(format='json')
+        # resp es una lista de dicts con muchos campos, elegimos algunos:
+        indices = []
+        for idx in resp:
+            indices.append({
+                "nombre": idx.get('index'),
+                "docs": idx.get('docs.count'),
+                "tamano": idx.get('store.size'),
+                "salud": idx.get('health'),
+                "status": idx.get('status'),
+            })
+        return indices
+
+
+    def ejecutar_query(self, index_name, query_body):
+        """
+        Ejecuta un _search con el body que envíe el usuario.
+        """
+        resp = self.client.search(
+            index=index_name,
+            body=query_body
+        )
+        return resp
+
+
+
+
